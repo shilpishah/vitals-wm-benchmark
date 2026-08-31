@@ -1,0 +1,20 @@
+# Declarative EpisodeSpec -- the corpus regenerates from this alone.
+# Phase 4 of the 2026-08 scene-diversity plan. Identical to
+# occlusion_corridor.yaml in every scored respect -- same lambda, same
+# perturbation mode, ball stays body index 0 -- the only difference is the
+# scene file, which replaces the static wall with a real, independently
+# moving second body (see occlusion_corridor_moving.xml's own docstring).
+# NOT YET SCORABLE end-to-end: motion_prior.py's occluder_bounds is still a
+# fixed constant, not yet wired to consult the occluder's own TRACKED
+# (phase-2 secondary-object) position each frame -- see AGENT.md M5.7's
+# open design note before running this through GATE-2-style scoring.
+name: occlusion_corridor_moving
+scene: scenes/occlusion_corridor_moving.xml
+target_property: P2
+band: I
+lam: 6.0
+n_reference: 30
+horizon_s: 8.0
+fps: 30
+seed: 0
+perturb_mode: velocity_x_only

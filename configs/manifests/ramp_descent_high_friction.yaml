@@ -1,0 +1,26 @@
+# Declarative EpisodeSpec -- the corpus regenerates from this alone.
+# High-friction P4 variant (2026-08, requested directly: "variations that
+# incorporate friction and other more complex physics"). Same target
+# property/band/lam/n_reference as ramp_descent.yaml -- only the scene
+# differs (much higher friction triple, see ramp_descent_high_friction.xml's
+# own comment), same "identical in every scored respect except the scene"
+# pattern already established by occlusion_corridor_distractor.yaml.
+name: ramp_descent_high_friction
+scene: scenes/ramp_descent_high_friction.xml
+target_property: P4
+band: I
+# lam=1.0 (ramp_descent's own default) left velocity_freeze censored at
+# GATE 1b -- swept directly (AGENT.md's documented method for exactly
+# this symptom, "vary lam, hold everything else, to isolate what the
+# threshold responds to"): 1.0 -> censored, 0.5/0.25/0.1 all fire. High
+# friction makes the reference ensemble's OWN exact deceleration/settling
+# behavior more sensitive to lam=1.0's perturbation than the base scene's
+# (small differences in slip/contact timing compound differently under
+# much higher friction), inflating R5's threshold enough to swallow the
+# mutant. 0.25 chosen over the more extreme 0.1 -- less aggressive
+# tightening of the reference ensemble, still fires cleanly.
+lam: 0.25
+n_reference: 30
+horizon_s: 6.0
+fps: 30
+seed: 0

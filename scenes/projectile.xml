@@ -1,0 +1,62 @@
+<mujoco model="projectile">
+  <!-- Z-up. Free-flight ballistic motion + floor bounces -- P4 (dynamics),
+       the SAME target property as ramp_descent, but a deliberately
+       DIFFERENT kinematic regime (parabolic free flight + restitution,
+       vs. ramp_descent's constrained sliding-then-rolling descent) --
+       isolated per-property scenario, not a combined one (AGENT.md 3.6).
+
+       Built specifically to scope M4's non-planar-motion generalization
+       ALONGSIDE ramp_descent (2026-08 scene-diversity discussion): ramp
+       descent's own motion is confined to a single FIXED, KNOWN plane
+       (the incline) -- geometrically the easy case, an extension of the
+       exact ray/plane math occlusion_corridor already uses, just tilted.
+       This scene is the genuinely hard case: the ball's true 3D position
+       is NOT constrained to any single known plane at any point during
+       flight, so reconstructing it from monocular video needs a real
+       depth-recovery method, not a generalized plane intersection.
+
+       Ball needs REAL restitution to bounce -- occlusion_corridor's own
+       ball geom (solref="0.01 1", dampratio=1) is deliberately CRITICALLY
+       DAMPED (no bounce, matches that scene's own "rolls to a stop"
+       requirement) and is the wrong contact model to copy here. -->
+  <option timestep="0.002" gravity="0 0 -9.81"/>
+  <visual>
+    <global offwidth="1280" offheight="720"/>
+  </visual>
+
+  <default>
+    <geom friction="0.6 0.005 0.03"/>
+  </default>
+
+  <worldbody>
+    <light diffuse="0.8 0.8 0.8" pos="4 0 4" dir="0 0 -1"/>
+
+    <geom name="floor" type="plane" size="9 3 0.1" pos="4 0 0" rgba="0.5 0.5 0.5 1"/>
+
+    <body name="ball" pos="0 0 0.15">
+      <freejoint/>
+      <!-- Negative solref = direct stiffness/damping (N/m, N*s/m) instead
+           of the usual (timeconst, dampratio) reference-spring form.
+           Found empirically, not assumed: the normal (timeconst,
+           dampratio) form barely produced ANY bounce here even at
+           dampratio as low as 0.05 (underdamped) -- swept dampratio,
+           timeconst, AND friction independently, all had almost no
+           effect, so it wasn't a damping-ratio or friction tuning
+           problem at all. Switching to the negative/direct form changed
+           this immediately -- gives a clean, clearly decaying 6-bounce
+           arc within ~2.7s at these values, not a physically "correct"
+           real-ball restitution coefficient, just enough elasticity for
+           a rich multi-bounce test scene. -->
+      <geom name="ball_geom" type="sphere" size="0.15" mass="0.5" rgba="0.8 0.1 0.1 1"
+            condim="6" solref="-30000 -30"/>
+    </body>
+  </worldbody>
+
+  <keyframe>
+    <!-- Baseline s_0: ball launched from just above the floor with both
+         horizontal (x) and vertical (z) velocity -- a real parabolic arc,
+         not a drop. Sigma perturbs dpos/dvel on top of this at rollout
+         time (physics/runner.py), same convention as every other scene. -->
+    <key name="launch" qpos="0 0 0.15 1 0 0 0" qvel="2.5 0 4.0 0 0 0"/>
+  </keyframe>
+</mujoco>

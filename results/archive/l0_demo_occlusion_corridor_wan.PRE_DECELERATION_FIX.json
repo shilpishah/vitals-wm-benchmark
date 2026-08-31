@@ -1,0 +1,54 @@
+{
+  "scenario": "occlusion_corridor",
+  "target_property": "P2",
+  "backend": "wan",
+  "M": 30,
+  "lam": 6.0,
+  "t_max": 3.0,
+  "thresholds_median": {
+    "R2": 0.0,
+    "R5": 2.923959901712851
+  },
+  "gate_1a": {
+    "false_termination_rate": null,
+    "target_alpha": 0.01,
+    "passed": null
+  },
+  "gate_1b": [],
+  "survival": {
+    "n": 2,
+    "vi50": 1.0333333333333332,
+    "vi50_ci95": [
+      1.0333333333333332,
+      1.6333333333333333
+    ],
+    "censoring_rate": 0.0,
+    "termination_profile": {
+      "R5": 1.0
+    },
+    "kaplan_meier": {
+      "t": [
+        0.0,
+        1.0333333333333332,
+        1.6333333333333333
+      ],
+      "S": [
+        1.0,
+        0.5,
+        0.0
+      ]
+    },
+    "events": [
+      {
+        "time": 1.0333333333333332,
+        "risk": "R5",
+        "censored": false
+      },
+      {
+        "time": 1.6333333333333333,
+        "risk": "R5",
+        "censored": false
+      }
+    ]
+  }
+}

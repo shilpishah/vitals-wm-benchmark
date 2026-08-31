@@ -1,0 +1,83 @@
+<mujoco model="collision">
+  <!-- Z-up. Flat ground. P4 (dynamics) -- a genuinely NEW kinematic
+       regime, not a variant of anything already in this repo: rigid-body
+       COLLISION / momentum transfer between two real, independently
+       simulated balls, rather than a single object's own free-flight or
+       constrained descent. Flagged in AGENT.md's own "future scene ideas"
+       list (2026-08) as the most tractable next addition -- MuJoCo's
+       actual strength (real contact solving, not fracture/fluids), and a
+       direct extension of the K>1 tracking machinery already built and
+       validated this session (occlusion_corridor_distractor/_moving),
+       not a new engine or a new measurement capability.
+
+       v1 scope, decided directly (2026-08, "Phase 1: scenario diversity
+       planning"): only the CUE ball (body index 0, launched) is scored --
+       same single-object P4 machinery every other scenario in this repo
+       already uses, reusing the flat-ground plane_z reconstruction mode
+       unchanged (both balls stay on the floor the whole clip, no new
+       reconstruction capability needed). Scoring the TARGET ball's own
+       post-collision motion too is a real, separate future extension
+       (would need the secondary object's own full search-and-
+       reidentify path wired through GATE 2 / real-model scoring, not
+       just the position-only tracking occlusion_corridor_moving's own
+       occluder gets) -- not attempted here, same "start with the
+       single-object case, extend later" discipline already used for
+       P2/P3.
+
+       contype/conaffinity: DELIBERATELY left at MuJoCo's own default (1/1
+       for every geom below) -- unlike occlusion_corridor_moving's own
+       occluder (explicitly zeroed to guarantee NO collision, since that
+       scene's whole point is occlusion, not impact), this scene's whole
+       point IS the collision, so both balls and the floor collide with
+       each other normally, no bitmask tricks needed. -->
+  <option timestep="0.002" gravity="0 0 -9.81"/>
+  <visual>
+    <global offwidth="1280" offheight="720"/>
+  </visual>
+
+  <default>
+    <geom friction="0.6 0.005 0.03" solref="0.01 1"/>
+  </default>
+
+  <worldbody>
+    <light diffuse="0.8 0.8 0.8" pos="4 0 4" dir="0 0 -1"/>
+
+    <geom name="floor" type="plane" size="9 3 0.1" pos="4 0 0" rgba="0.5 0.5 0.5 1"/>
+
+    <!-- Cue ball -- body index 0, the ONLY object scored (see module
+         comment above). Launched toward the target ball; Sigma perturbs
+         its own initial velocity at rollout time (perturb_mode:
+         velocity_x_only, same convention as occlusion_corridor). -->
+    <body name="ball" pos="0 0 0.15">
+      <freejoint/>
+      <geom name="ball_geom" type="sphere" size="0.15" mass="0.5" rgba="0.8 0.1 0.1 1"
+            condim="6"/>
+    </body>
+
+    <!-- Target ball -- body index 1, unscored this pass, real collision
+         partner (NOT weightless/non-colliding like occlusion_corridor_
+         moving's own occluder -- this body must physically respond to
+         impact for the scene's own purpose to hold). Starts at rest,
+         directly in the cue ball's path. Independently Sigma-perturbed
+         (a small resting-position nudge) at rollout time, same "every
+         free body gets its own independent perturbation" convention as
+         occlusion_corridor_moving. Different color so DINO-based re-
+         identification (if ever extended to track this object too) has
+         real appearance signal, same reasoning as the distractor scene's
+         own decoy. -->
+    <body name="target" pos="3 0 0.15">
+      <freejoint/>
+      <geom name="target_geom" type="sphere" size="0.15" mass="0.5" rgba="0.1 0.3 0.8 1"
+            condim="6"/>
+    </body>
+  </worldbody>
+
+  <keyframe>
+    <!-- Cue ball launched at 3.0 m/s toward the target ball (separated by
+         3m along x); target ball at rest. Both bodies free -- Sigma
+         perturbs each independently at rollout time (physics/runner.py),
+         same convention as every other multi-body scene. -->
+    <key name="break" qpos="0 0 0.15 1 0 0 0   3 0 0.15 1 0 0 0"
+                      qvel="3.5 0 0 0 0 0      0 0 0 0 0 0"/>
+  </keyframe>
+</mujoco>

@@ -1,0 +1,34 @@
+# Declarative EpisodeSpec -- the corpus regenerates from this alone.
+# P3-lite (2026-08): the FIRST manifest to pre-register target_property: P3.
+# Reuses scenes/occlusion_corridor_distractor.xml AS-IS (no new scene file --
+# it already has K=2 real, always-present objects: ball [obj=0] and decoy
+# [target=1], see that file's own docstring). This is a genuinely separate,
+# pre-registered experiment from occlusion_corridor_distractor.yaml's own P2
+# specificity test on the SAME scene (AGENT.md 3.6/3.12: one manifest = one
+# necessary property, decided before running, never combined) -- that
+# manifest is untouched by this one's existence.
+#
+# What's different here is entirely in scripts/run_l0_demo.py's own
+# handling, not this file: target_property: P3 is what makes that script add
+# sigma_interpenetration (R4) to STATS and swap the `teleport` mutant into
+# GATE 1b's demo cases and the 80-episode survival population.
+#
+# n_reference: 100, not the usual 30 -- found directly (2026-08) that
+# GATE 1a's false-termination rate is a union across R2/R4/R5 together, and
+# at M=30 estimate_threshold's own whole-path calibration was already
+# selecting the single MAXIMUM LOO deviation out of only 30 references
+# (confirmed by sweeping alpha from 0.01 to 0.001 with zero change in the
+# resulting threshold) -- too small a sample for a 3rd risk channel to
+# share the same false-alarm budget reliably. Swept M directly rather than
+# guessing: 30 -> fp=0.067 (fail), 60 -> 0.033, 100 -> 0.000. This manifest
+# alone uses M=100; every other manifest's own M=30 is untouched.
+name: occlusion_corridor_interpenetration
+scene: scenes/occlusion_corridor_distractor.xml
+target_property: P3
+band: I
+lam: 6.0
+n_reference: 100
+horizon_s: 8.0
+fps: 30
+seed: 0
+perturb_mode: velocity_x_only

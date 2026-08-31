@@ -1,0 +1,97 @@
+<mujoco model="occlusion_corridor_moving">
+  <!-- Z-up. Flat ground only. Phase 4 of the 2026-08 scene-diversity plan
+       (AGENT.md M5.6's own continuation): identical to occlusion_corridor
+       EXCEPT the static wall is now a real, freely-moving second body
+       ("occluder") -- same box geometry/position as the original wall
+       (occlusion geometry already empirically validated there, not
+       re-derived from scratch), but with a freejoint and its own sliding
+       motion across the corridor's width (y-axis), independently
+       Sigma-perturbed like the ball.
+
+       This is the "real, measured motion" design chosen over a scripted/
+       known-in-advance occluder (2026-08 discussion): the occluder's
+       CURRENT position must be genuinely TRACKED each frame (via M5.6's
+       secondary-object plumbing), not assumed, so the ball's own
+       occluder-aware search logic (motion_prior.py) has to fall back to
+       "no known occluder this frame" whenever the occluder itself isn't
+       currently measured -- privileged ground-truth knowledge of a moving,
+       randomly-perturbed body would violate 3.1 the same way privileged
+       knowledge of the BALL's own state would.
+
+       contype/conaffinity: same bitmask pattern as
+       occlusion_corridor_distractor.xml (floor=1/6, ball=2/1,
+       occluder=4/1) -- the occluder slides on the floor but
+       passes through the ball, never physically colliding with it (a
+       real collision would make this a SENSITIVITY test, not this
+       scene's occlusion/existence test -- kept deliberately separate,
+       same reasoning as the distractor scene's own decoy). -->
+  <option timestep="0.002" gravity="0 0 -9.81"/>
+  <visual>
+    <global offwidth="1280" offheight="720"/>
+  </visual>
+
+  <default>
+    <geom friction="0.6 0.005 0.03" solref="0.01 1"/>
+  </default>
+
+  <worldbody>
+    <light diffuse="0.8 0.8 0.8" pos="4 0 4" dir="0 0 -1"/>
+
+    <geom name="floor" type="plane" size="9 3 0.1" pos="6 0 0" rgba="0.5 0.5 0.5 1"
+          contype="1" conaffinity="6"/>
+
+    <!-- Ball MUST stay body index 0 -- same invariant as every other scene
+         in this repo (detect/statistics.py's obj=0 default etc). -->
+    <body name="ball" pos="0 0 0.15">
+      <freejoint/>
+      <geom name="ball_geom" type="sphere" size="0.15" mass="0.5" rgba="0.8 0.1 0.1 1"
+            condim="6" contype="2" conaffinity="1"/>
+    </body>
+
+    <!-- Occluder: same box size/nominal x-position as occlusion_corridor's
+         static wall, now free to move. alpha MUST be 1 (fully opaque) --
+         same reasoning as the original wall (module comment there): alpha
+         < 1 would let the renderer alpha-blend a faint ghost of anything
+         behind it into RGB, silently turning "full occlusion" into "very
+         low visibility," a different and much easier test.
+
+         gravcomp="1" (weightless) and non-colliding with everything
+         (contype/conaffinity 0, same treatment the ORIGINAL static wall
+         already had) -- found the hard way: a box sliding on the floor
+         with a real freejoint bounces/tumbles on contact (confirmed
+         directly: `ncon` drops to 0 then back to 4 within the first 20
+         steps, and the horizontal velocity dies to zero within ~0.1s
+         REGARDLESS of the friction coefficient, including at friction=0
+         -- so it isn't a friction problem, it's box-plane contact
+         dynamics). Simplest real fix: remove the contact entirely. This
+         is still a genuinely simulated, independently Sigma-perturbed
+         free body (not privileged/scripted position) -- it's just
+         weightless and frictionless, giving clean constant-velocity
+         motion instead of fighting the solver over sliding-box physics
+         that this scene has no actual need to model realistically. -->
+    <body name="occluder" pos="5 -2.5 0.5" gravcomp="1">
+      <freejoint/>
+      <geom name="occluder_geom" type="box" size="0.75 0.6 0.5"
+            rgba="0.3 0.3 0.3 1" contype="0" conaffinity="0"/>
+      <!-- Cosmetic "lit opening" decal, same treatment as occlusion_
+           corridor.xml's own copy of this comment -- a child geom of the
+           SAME moving body, offset in the body's own local +y (the face
+           that faces the ball's lane as it slides through), so it tracks
+           the occluder's motion automatically without any extra code. -->
+      <geom name="occluder_opening" type="box" size="0.55 0.02 0.35" pos="0 0.61 0"
+            contype="0" conaffinity="0" rgba="0.95 0.95 0.75 1"/>
+    </body>
+  </worldbody>
+
+  <keyframe>
+    <!-- Ball: identical baseline to occlusion_corridor.xml. Occluder:
+         starts fully out of the ball's lane (y=-2.5, same x/z as the
+         original static wall) and slides across the corridor's width at a
+         nominal 0.7 m/s -- sweeps through y=0 (the ball's own lane)
+         partway through an 8s clip, independently of wherever the ball
+         itself happens to be at that moment (both bodies Sigma-perturbed
+         independently at rollout time). -->
+    <key name="push" qpos="0 0 0.15 1 0 0 0   5 -2.5 0.5 1 0 0 0"
+                     qvel="4.3 0 0 0 0 0      0 0.7 0 0 0 0"/>
+  </keyframe>
+</mujoco>

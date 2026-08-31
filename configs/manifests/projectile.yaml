@@ -1,0 +1,39 @@
+# Declarative EpisodeSpec -- the corpus regenerates from this alone.
+# 2026-08 scene-diversity plan: P4 (dynamics), same target property as
+# ramp_descent, but a deliberately DIFFERENT kinematic regime (free-flight
+# parabolic motion + floor bounces, vs. ramp_descent's constrained
+# sliding-then-rolling descent) -- isolated per-property scenario, per
+# AGENT.md 3.6. Built specifically as the "true free 3D motion" case to
+# scope M4's non-planar-motion generalization alongside ramp_descent's
+# "known fixed plane" case -- see scenes/projectile.xml's own docstring.
+name: projectile
+scene: scenes/projectile.xml
+target_property: P4
+band: I
+lam: 0.15               # NOT 1.0 -- see AGENT.md M4.5's GATE 1b calibration writeup.
+                        # At the default lam=1.0, full isotropic perturbation swings
+                        # launch vz enough to scatter bounce-apex height and bounce
+                        # COUNT wildly across the 30-reference ensemble (measured: ref
+                        # z-std up to ~3.5m at t=1.5s, against the ball's own ~1m total
+                        # height range) -- whole-path R5 calibration (thresholds.py)
+                        # inflates to swallow that natural chaos, and even a fully
+                        # frozen-velocity trajectory (physics stopped outright) reads as
+                        # statistically ordinary against it. Confirmed empirically this
+                        # is a THRESHOLD problem, not a mutant-severity one: sweeping lam
+                        # down with a FIXED mutant trajectory (decoupling ensemble noise
+                        # from mutant noise) shows velocity_freeze/wrong_gravity/jitter
+                        # all start firing reliably once lam <= ~0.2; 0.15 gives margin.
+                        # GATE 1a false-termination rate stays 0.000 at this lam (target
+                        # ~0.01) -- shrinking lam only tightens the reference envelope,
+                        # it does not risk false alarms on genuine references.
+n_reference: 30
+horizon_s: 3.0          # short -- most of the interesting dynamics (6 decaying
+                        # bounces) resolve within ~2.7s at this scene's own tuning
+fps: 30
+seed: 0
+# Isotropic 3D perturbation, NOT velocity_x_only -- unlike occlusion_corridor,
+# this scene's whole point is genuine 3D motion, so vertical launch speed is
+# a physically-free variable here, not a contamination risk to isolate away
+# from (see physics/perturb.py::sample_perturbation vs
+# sample_velocity_perturbation's own docstrings for that distinction).
+perturb_mode: full

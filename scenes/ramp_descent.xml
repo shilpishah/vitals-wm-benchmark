@@ -1,0 +1,76 @@
+<mujoco model="ramp_descent">
+  <!-- Z-up (MuJoCo default). Ball starts on an incline and rolls down onto
+       flat ground. This scene tests ONE thing: whether motion down a slope
+       stays kinematically plausible (P4/R5). It deliberately has no
+       occluder -- occlusion is a different necessary property (P2/R2) with
+       a different failure mode (a model might nail incline dynamics and
+       still hallucinate through an occlusion, or vice versa), so it gets
+       its own scene (occlusion_corridor.xml) rather than being combined
+       here. Combining them would make a failure ambiguous: you couldn't
+       tell whether a bad rollout failed at the incline or at the
+       occlusion. See AGENT.md 3.6 -- the whole point of the precedence
+       design is that each necessary property is measured by an
+       experiment that isolates it. -->
+  <option timestep="0.002" gravity="0 0 -9.81"/>
+  <visual>
+    <global offwidth="1280" offheight="720"/>
+  </visual>
+
+  <default>
+    <!-- friction = (sliding, torsional, rolling). Rolling friction must be
+         large enough to actually decelerate a rolling ball -- at ~0 it
+         coasts forever once it stops slipping, which silently turns any
+         mutant injected after settling into a no-op (README, "note from
+         the first run"). -->
+    <geom friction="0.6 0.005 0.03" solref="0.01 1"/>
+  </default>
+
+  <worldbody>
+    <light diffuse="0.8 0.8 0.8" pos="0 0 4" dir="0 0 -1"/>
+
+    <geom name="floor" type="plane" size="6 3 0.1" pos="1.6 0 0" rgba="0.5 0.5 0.5 1"/>
+
+    <!-- Box centre/size solved from the desired WORLD-SPACE top-surface
+         endpoints (top: x=-4.286 z=1.8, toe: x=-0.9 z=0 -- flush with the
+         floor, no step) via the euler-Y rotation, not guessed pre-rotation:
+         guessing pre-rotation coordinates put the ball's start almost
+         exactly on the rotated ramp's true top edge (4cm of margin), which
+         made the whole reference ensemble trimodal -- roll forward, roll
+         backward off the ramp, or land balanced on the edge and barely
+         move at all -- depending on lambda-scale perturbation alone. -->
+    <geom name="ramp" type="box" size="1.917 0.6 0.05" pos="-2.6165 0 0.8559"
+          euler="0 28 0" rgba="0.6 0.4 0.3 1"/>
+
+    <!-- Support legs -- purely cosmetic (contype/conaffinity 0, same as the
+         wall), so they change nothing about the physics: the ramp was
+         already a fixed, immovable geom regardless of what visibly holds it
+         up. But an unsupported box floating at an angle reads as an obvious
+         rendering artifact, which undermines the whole point of a
+         physical-plausibility benchmark. Heights solved from the ramp's own
+         top-surface formula (z_top(x) = 1.8 - 0.5317*(x+4.286)) minus the
+         box's vertical thickness, so the legs actually meet the underside
+         rather than floating or clipping through it. -->
+    <geom name="ramp_leg_1a" type="box" size="0.06 0.06 0.7533" pos="-3.9 0.5 0.7533"
+          contype="0" conaffinity="0" rgba="0.45 0.3 0.2 1"/>
+    <geom name="ramp_leg_1b" type="box" size="0.06 0.06 0.7533" pos="-3.9 -0.5 0.7533"
+          contype="0" conaffinity="0" rgba="0.45 0.3 0.2 1"/>
+    <geom name="ramp_leg_2a" type="box" size="0.06 0.06 0.3014" pos="-2.2 0.5 0.3014"
+          contype="0" conaffinity="0" rgba="0.45 0.3 0.2 1"/>
+    <geom name="ramp_leg_2b" type="box" size="0.06 0.06 0.3014" pos="-2.2 -0.5 0.3014"
+          contype="0" conaffinity="0" rgba="0.45 0.3 0.2 1"/>
+
+    <!-- x=-3.3 is ~1m inboard of the ramp's true top edge (x=-4.286) --
+         enough margin that lambda-scale perturbation can't push the ball
+         past it. Ramp top-surface height at x=-3.3 is ~1.28m; drop from
+         1.7m for a small, consistent settling fall. -->
+    <body name="ball" pos="-3.3 0 1.7">
+      <freejoint/>
+      <geom name="ball_geom" type="sphere" size="0.15" mass="0.5" rgba="0.8 0.1 0.1 1"
+            condim="6"/>
+      <!-- condim=6 is required for torsional/rolling friction (components 2
+           and 3) to be enforced at all -- default condim=3 silently ignores
+           them, which is why the rolling-friction coefficient above did
+           nothing on its own. -->
+    </body>
+  </worldbody>
+</mujoco>

@@ -1,0 +1,310 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>VITALS — GATE 1 Survival Curves</title>
+<style>
+:root {
+  --bg: #ffffff; --surface: #f7f7f8; --ink-primary: #1a1a1e; --ink-secondary: #55555f;
+  --ink-muted: #8a8a94; --border: #e3e3e8; --grid: #eceef1;
+  --status-good: #2E8B57; --chip-bg: #eef1f5;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #16161a; --surface: #1e1e24; --ink-primary: #f0f0f3; --ink-secondary: #b5b5c0;
+    --ink-muted: #7d7d89; --border: #303038; --grid: #2a2a32;
+    --status-good: #5FBF87; --chip-bg: #262630;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink-primary); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; padding: 32px 24px 64px; }
+.wrap { max-width: 980px; margin: 0 auto; }
+h1 { font-size: 1.4rem; margin: 0 0 4px; }
+.subtitle { color: var(--ink-secondary); font-size: 0.9rem; margin: 0 0 4px; line-height: 1.5; }
+.scope-note { color: var(--ink-muted); font-size: 0.8rem; margin: 12px 0 28px; line-height: 1.6; padding: 10px 14px; background: var(--surface); border-radius: 8px; border: 1px solid var(--border); }
+.scope-note b { color: var(--ink-secondary); }
+h2 { font-size: 1rem; margin: 40px 0 14px; }
+.legend { display: flex; flex-wrap: wrap; gap: 20px; margin-bottom: 10px; font-size: 0.82rem; }
+.legend-item { display: flex; align-items: center; gap: 7px; color: var(--ink-secondary); }
+.swatch { width: 14px; height: 3px; border-radius: 2px; }
+.chart-container { position: relative; width: 100%; overflow-x: auto; }
+svg { width: 100%; height: auto; display: block; }
+.gridline { stroke: var(--grid); stroke-width: 1; }
+.axis-label { fill: var(--ink-muted); font-size: 10px; }
+.step-line { fill: none; stroke-width: 2; }
+.step-line-censored { fill: none; stroke-width: 2; stroke-dasharray: 2,3; opacity: 0.55; }
+.crosshair-line { stroke: var(--ink-muted); stroke-width: 1; stroke-dasharray: 3,3; opacity: 0; pointer-events: none; }
+.hover-dot { opacity: 0; pointer-events: none; }
+.tooltip { position: absolute; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; font-size: 0.78rem; pointer-events: none; opacity: 0; transition: opacity 0.1s; white-space: nowrap; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+.stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; margin-bottom: 8px; }
+.stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
+.stat-card .label { font-size: 0.72rem; color: var(--ink-muted); text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 6px; }
+.stat-card .value { font-size: 1.3rem; font-weight: 600; }
+.stat-card .sub { font-size: 0.76rem; color: var(--ink-secondary); margin-top: 3px; }
+table { width: 100%; border-collapse: collapse; font-size: 0.82rem; margin-top: 8px; }
+th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--border); }
+th { color: var(--ink-muted); font-weight: 500; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.02em; }
+td.ok { color: var(--status-good); }
+td.mono { font-variant-numeric: tabular-nums; }
+.pill { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 0.72rem; background: var(--chip-bg); color: var(--ink-secondary); }
+.toggle-btn { background: var(--surface); border: 1px solid var(--border); color: var(--ink-secondary); border-radius: 6px; padding: 5px 12px; font-size: 0.78rem; cursor: pointer; margin-bottom: 10px; }
+.raw-table { display: none; max-height: 300px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; }
+.raw-table.open { display: block; }
+footer { margin-top: 48px; font-size: 0.76rem; color: var(--ink-muted); border-top: 1px solid var(--border); padding-top: 16px; line-height: 1.6; }
+code { background: var(--chip-bg); padding: 1px 5px; border-radius: 4px; font-size: 0.85em; }
+.glossary { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; margin-bottom: 36px; }
+.gloss-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; }
+.gloss-card .term { font-size: 0.82rem; font-weight: 600; margin-bottom: 4px; display: flex; align-items: center; gap: 7px; }
+.gloss-card .term .tag { font-size: 0.68rem; font-weight: 700; padding: 1px 6px; border-radius: 4px; background: var(--chip-bg); color: var(--ink-secondary); letter-spacing: 0.02em; }
+.gloss-card p { margin: 0; font-size: 0.78rem; color: var(--ink-secondary); line-height: 1.55; }
+.nav-link { font-size: 0.82rem; margin-bottom: 18px; display: inline-block; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="nav-link" href="score_report.pdf">&larr; Score report (PDF)</a>
+  <a class="nav-link" href="gate2_instrument_tax.html">GATE 2 instrument tax (video vs. ground-truth measurement) &rarr;</a>
+  <h1>GATE 1 — Survival Curves</h1>
+  <p class="subtitle">Kaplan-Meier survival over a population of mixed-mutant rollouts per scenario, state-space (ground truth), no video. Auto-generated from every <code>results/l0_demo_*.json</code> found on disk.</p>
+  <div class="scope-note">
+    <b>Not a "scorecard."</b> This project's own design explicitly avoids a single aggregate score (AGENT.md §3.11) — a survival curve + termination profile is the report that stands in for one.
+    <br><br>
+    <b>Every series is prefixed (T) / (C) / (B) and colored by that same category</b> — <b>(T) red</b> = Truth, GATE 1's own state-space validation: the reference rollouts ARE the ground-truth physics, deliberately corrupted with a known planted failure time by the mutant library, run so the detector's recovered failure times can be checked against that known answer. <b>(C) blue</b> = Cosmos, a real video-generation model, scored through the actual Phi (SAM2/DINOv2 + 3D reconstruction) pipeline with no ground truth involved on the candidate side at all. <b>(B) green</b> = baseline models (e.g. constant-velocity extrapolation) scored through the identical pipeline as Cosmos, for a fair, apples-to-apples comparison. Multiple curves within one category get different SHADES of that category's color, not different hues. Treat small-sample (C)/(B) populations as illustrative, not statistically powered, until their n matches the (T) populations' own scale (see AGENT.md M6).
+    <br><br>
+    Regenerate the (T) curves via <code>python3 scripts/run_l0_demo.py</code> (per scenario), a (C) population via <code>python3 scripts/run_cosmos_population.py</code>, a (B) population via <code>python3 scripts/run_eval.py --adapter &lt;name&gt;</code>, then <code>python3 scripts/render_survival_report.py</code>.
+  </div>
+
+  <h2>Key — what these terms mean</h2>
+  <div class="glossary">
+    <div class="gloss-card">
+      <div class="term"><span class="tag">R2</span>Existence</div>
+      <p><code>sigma_existence</code> — did the tracked object stop existing (vanished) or spuriously duplicate, compared to how much the reference ensemble's own existence varies at that instant? Fires on mutants like <code>vanish</code> / <code>duplicate</code>.</p>
+    </div>
+    <div class="gloss-card">
+      <div class="term"><span class="tag">R5</span>Kinematic</div>
+      <p><code>sigma_kinematic</code> — did the object's motion (position/velocity) stop being physically plausible, compared to the reference ensemble's own spread at that instant? Fires on mutants like <code>velocity_freeze</code> / <code>wrong_gravity</code>.</p>
+    </div>
+    <div class="gloss-card">
+      <div class="term"><span class="tag">·</span>Censored</div>
+      <p>The rollout reached the end of the clip without R2 or R5 ever crossing its threshold — it didn't "fail" by this benchmark's definition, so its true failure time is only known to be ≥ the clip length, not exact. Same usage as a still-alive patient at a clinical trial's end.</p>
+    </div>
+    <div class="gloss-card">
+      <div class="term"><span class="tag">α</span>False-termination rate (GATE 1a)</div>
+      <p>Of a held-out population of <i>uncorrupted</i> reference rollouts (no planted defect at all), the fraction the detector still fired on anyway. This is the detector's own false-positive floor — it should sit near the target α (≈0.01), and PASS is defined generously (≤5×α) since this is a finite-sample estimate.</p>
+    </div>
+    <div class="gloss-card">
+      <div class="term"><span class="tag">VI₅₀</span>Validity interval</div>
+      <p>The median time at which a rollout in the population has failed (Kaplan-Meier's own quantile). Reported with a bootstrap 95% CI, not as a bare point estimate.</p>
+    </div>
+    <div class="gloss-card">
+      <div class="term"><span class="tag">·</span>Termination profile</div>
+      <p>Of the rollouts that DID fail, what fraction failed via R2 vs R5 — i.e., which failure mode dominates this population, not just when failure happened.</p>
+    </div>
+  </div>
+
+  <h2>Survival curve S(t)</h2>
+  <div class="legend" id="legend"></div>
+  <div class="chart-container">
+    <svg id="chart" viewBox="0 0 900 340" preserveAspectRatio="xMidYMid meet"></svg>
+    <div class="tooltip" id="tooltip"></div>
+  </div>
+  <p class="scope-note" style="margin-top:8px;padding:6px 12px;font-size:0.74rem">
+    Solid = observed failures. <b>Dashed</b> = no further failures were observed before THIS
+    scenario's own clip ended (still censored, not missing data) -- each scenario runs a
+    different clip length, so a shorter one's line legitimately stops earlier than a longer
+    one's, rather than continuing across the whole chart.
+  </p>
+
+  <div class="stat-grid" id="statGrid"></div>
+
+  <h2>GATE 1a — false-termination rate on held-out null references</h2>
+  <table id="gate1aTable"></table>
+
+  <h2>GATE 1b — sensitivity / specificity per mutant</h2>
+  <table id="gate1bTable"></table>
+
+  <button class="toggle-btn" id="rawToggle">Show raw Kaplan-Meier data (table view)</button>
+  <div class="raw-table" id="rawTable"></div>
+
+  <footer>
+    Generated by <code>scripts/render_survival_report.py</code> from <code>results/l0_demo_*.json</code>.
+  </footer>
+</div>
+
+<script>
+const DATA = __DATA_JSON__;
+const SERIES = __SERIES_JSON__;
+
+function isDark() { return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches; }
+function colorFor(s) { return isDark() ? s.colorDark : s.colorLight; }
+function fmt(v, d=2) { if (v === null || v === undefined) return "—"; if (!isFinite(v)) return "∞"; return v.toFixed(d); }
+
+function buildLegend() {
+  document.getElementById("legend").innerHTML = SERIES.map(s =>
+    `<div class="legend-item"><span class="swatch" style="background:${colorFor(s)}"></span>${s.label}</div>`).join("");
+}
+
+function buildStats() {
+  const grid = document.getElementById("statGrid");
+  grid.innerHTML = SERIES.map(s => {
+    const surv = DATA[s.key].survival;
+    return `<div class="stat-card">
+      <div class="label">${s.label} — VI₅₀</div>
+      <div class="value">${fmt(surv.vi50)}s</div>
+      <div class="sub">95% CI [${fmt(surv.vi50_ci95[0])}, ${fmt(surv.vi50_ci95[1])}]s · n=${surv.n} · censoring=${fmt(surv.censoring_rate)}</div>
+      <div class="sub">termination profile — R2:${fmt(surv.termination_profile.R2)} R5:${fmt(surv.termination_profile.R5)}</div>
+    </div>`;
+  }).join("");
+}
+
+function buildGate1aTable() {
+  // g.passed is null (not false) for a real-model population -- there is
+  // no "null reference" defect-injection concept to check a false-positive
+  // rate against for real generated video, so this must render distinctly
+  // from an actual FAIL, not silently fall into the falsy branch.
+  let html = "<tr><th>scenario</th><th>false-termination rate</th><th>target α</th><th>result</th></tr>";
+  SERIES.forEach(s => {
+    const g = DATA[s.key].gate_1a;
+    const result = g.passed === null || g.passed === undefined ? "N/A" : (g.passed ? "PASS" : "FAIL");
+    const cls = g.passed === true ? "ok" : "";
+    html += `<tr><td>${s.label}</td><td class="mono">${fmt(g.false_termination_rate,3)}</td><td class="mono">${fmt(g.target_alpha,3)}</td>
+      <td class="${cls}">${result}</td></tr>`;
+  });
+  document.getElementById("gate1aTable").innerHTML = html;
+}
+
+function buildGate1bTable() {
+  let html = "<tr><th>mutant</th><th>expected</th><th>fired</th><th>t*</th><th>t_detected</th><th>bias</th></tr>";
+  SERIES.forEach(s => {
+    html += `<tr><td colspan="6" style="padding-top:16px;border-bottom:2px solid var(--border)">
+      <span class="pill" style="background:${colorFor(s)}22;color:${colorFor(s)}">${s.label}</span></td></tr>`;
+    DATA[s.key].gate_1b.forEach(row => {
+      const expected = row.risk_expected || "—";
+      const fired = row.censored ? "censored" : (row.risk_fired || "—");
+      const ok = (row.risk_fired || null) === (row.risk_expected || null);
+      const bias = (row.t_star !== null && row.t_detected !== null) ? (row.t_detected - row.t_star) : null;
+      html += `<tr><td>${row.label}</td>
+        <td class="mono">${expected}</td><td class="mono ${ok ? 'ok' : ''}">${fired}</td>
+        <td class="mono">${fmt(row.t_star)}</td><td class="mono">${fmt(row.t_detected)}</td>
+        <td class="mono">${bias !== null ? (bias>=0?'+':'')+fmt(bias) : '—'}</td></tr>`;
+    });
+  });
+  document.getElementById("gate1bTable").innerHTML = html;
+}
+
+function buildRawTable() {
+  let html = "<table><tr><th>scenario</th><th>t (s)</th><th>S(t)</th></tr>";
+  SERIES.forEach(s => {
+    const km = DATA[s.key].survival.kaplan_meier;
+    km.t.forEach((t_, i) => {
+      html += `<tr><td><span class="pill">${s.key}</span></td><td class="mono">${fmt(t_,3)}</td><td class="mono">${fmt(km.S[i],4)}</td></tr>`;
+    });
+  });
+  document.getElementById("rawTable").innerHTML = html + "</table>";
+}
+
+function drawChart() {
+  const svg = document.getElementById("chart");
+  const W = 900, H = 340, M = { top: 16, right: 24, bottom: 34, left: 44 };
+  const plotW = W - M.left - M.right, plotH = H - M.top - M.bottom;
+
+  let tMax = 0;
+  SERIES.forEach(s => {
+    const km = DATA[s.key].survival.kaplan_meier;
+    tMax = Math.max(tMax, ...km.t.filter(isFinite));
+  });
+  tMax = Math.ceil(tMax * 1.05 * 10) / 10 || 1;
+
+  const x = t => M.left + (t / tMax) * plotW;
+  const y = s => M.top + (1 - s) * plotH;
+
+  let svgContent = "";
+  for (let i = 0; i <= 5; i++) {
+    const sv = i / 5;
+    svgContent += `<line class="gridline" x1="${M.left}" x2="${W-M.right}" y1="${y(sv)}" y2="${y(sv)}"/>`;
+    svgContent += `<text class="axis-label" x="${M.left-8}" y="${y(sv)+3}" text-anchor="end">${sv.toFixed(1)}</text>`;
+  }
+  const nTicks = 6;
+  for (let i = 0; i <= nTicks; i++) {
+    const tv = (tMax / nTicks) * i;
+    svgContent += `<line class="gridline" x1="${x(tv)}" x2="${x(tv)}" y1="${M.top}" y2="${H-M.bottom}"/>`;
+    svgContent += `<text class="axis-label" x="${x(tv)}" y="${H-M.bottom+16}" text-anchor="middle">${tv.toFixed(1)}s</text>`;
+  }
+  svgContent += `<text class="axis-label" x="${M.left}" y="${H-6}" text-anchor="start">time (s)</text>`;
+
+  SERIES.forEach(s => {
+    const km = DATA[s.key].survival.kaplan_meier;
+    const seriesTMax = DATA[s.key].t_max;   // this scenario's OWN clip length -- almost
+                                             // never equal to the chart's shared tMax
+                                             // (the max across every series), since each
+                                             // scenario runs a different horizon_s
+    let d = "";
+    km.t.forEach((t_, i) => { d += (i === 0 ? "M" : "L") + x(Math.min(t_, tMax)) + "," + y(km.S[i]) + " "; });
+    svgContent += `<path class="step-line" d="${d}" stroke="${colorFor(s)}"/>`;
+
+    // Kaplan-Meier is only DEFINED up to the last observed event -- past
+    // that, every remaining rollout in the population is simply censored
+    // (never failed before its own clip ended), so S(t) truly is flat, not
+    // unknown. Drawn as a distinct DASHED segment out to this series' own
+    // t_max (not the shared chart tMax) so a shorter-horizon scenario reads
+    // as "still valid, clip ended" rather than silently vanishing partway
+    // across a chart shared with longer-horizon scenarios.
+    const lastT = km.t[km.t.length - 1], lastS = km.S[km.S.length - 1];
+    if (seriesTMax > lastT) {
+      const dExt = `M${x(Math.min(lastT, tMax))},${y(lastS)} L${x(Math.min(seriesTMax, tMax))},${y(lastS)}`;
+      svgContent += `<path class="step-line-censored" d="${dExt}" stroke="${colorFor(s)}"/>`;
+    }
+  });
+
+  svgContent += `<line class="crosshair-line" id="crosshair" y1="${M.top}" y2="${H-M.bottom}"/>`;
+  SERIES.forEach(s => { svgContent += `<circle class="hover-dot" id="dot-${s.key}" r="4" fill="${colorFor(s)}"/>`; });
+  svgContent += `<rect id="hoverCapture" x="${M.left}" y="${M.top}" width="${plotW}" height="${plotH}" fill="transparent"/>`;
+
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  svg.innerHTML = svgContent;
+
+  const capture = document.getElementById("hoverCapture");
+  const tooltip = document.getElementById("tooltip");
+  const crosshair = document.getElementById("crosshair");
+
+  capture.addEventListener("mousemove", (e) => {
+    const rect = svg.getBoundingClientRect();
+    const scale = W / rect.width;
+    const mouseX = (e.clientX - rect.left) * scale;
+    const tHover = ((mouseX - M.left) / plotW) * tMax;
+    crosshair.setAttribute("x1", mouseX); crosshair.setAttribute("x2", mouseX);
+    crosshair.style.opacity = 1;
+    let lines = "";
+    SERIES.forEach(s => {
+      const km = DATA[s.key].survival.kaplan_meier;
+      let idx = 0;
+      for (let i = 0; i < km.t.length; i++) { if (km.t[i] <= tHover) idx = i; else break; }
+      const sv = km.S[idx];
+      const dot = document.getElementById("dot-" + s.key);
+      dot.setAttribute("cx", x(Math.min(km.t[idx], tMax)));
+      dot.setAttribute("cy", y(sv));
+      dot.style.opacity = 1;
+      lines += `<div>${s.label}: S=${sv.toFixed(3)}</div>`;
+    });
+    tooltip.innerHTML = `<div style="color:var(--ink-muted);margin-bottom:3px">t=${tHover.toFixed(2)}s</div>` + lines;
+    tooltip.style.left = (mouseX / scale + 14) + "px";
+    tooltip.style.top = "10px";
+    tooltip.style.opacity = 1;
+  });
+  capture.addEventListener("mouseleave", () => {
+    crosshair.style.opacity = 0; tooltip.style.opacity = 0;
+    SERIES.forEach(s => { document.getElementById("dot-" + s.key).style.opacity = 0; });
+  });
+}
+
+function render() { buildLegend(); buildStats(); buildGate1aTable(); buildGate1bTable(); buildRawTable(); drawChart(); }
+document.getElementById("rawToggle").addEventListener("click", () => {
+  const t = document.getElementById("rawTable");
+  t.classList.toggle("open");
+  document.getElementById("rawToggle").textContent = t.classList.contains("open") ? "Hide raw Kaplan-Meier data" : "Show raw Kaplan-Meier data (table view)";
+});
+render();
+if (window.matchMedia) { window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", render); }
+</script>
+</body>
+</html>

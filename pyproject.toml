@@ -1,0 +1,28 @@
+[project]
+name = "vitals"
+version = "0.1.0"
+description = "Validity Intervals and Termination Attribution for Long-horizon Simulation"
+requires-python = ">=3.10"
+dependencies = ["numpy>=1.24", "pyyaml>=6.0"]
+
+[project.optional-dependencies]
+physics = ["mujoco>=3.0"]
+viz = ["pillow>=10.0"]
+# Only needed by vitals/adapters/cosmos.py -- writing/reading the video FILES
+# Cosmos's own documented CLI interface requires (AGENT.md M6). No other
+# module in this project reads or writes compressed video (Frames' own
+# docstring: "never compressed video"); this is the one deliberate exception.
+cosmos = ["imageio[ffmpeg]>=2.30"]
+# Only needed by scripts/plot_survival_native.py -- a native (non-browser)
+# GUI alternative to render_survival_report.py's HTML output, requested
+# directly (2026-08: "i would rather a plotting tool without touching a
+# browser at all"). Needs a real GUI backend (macosx/Qt/Tk) to open an
+# interactive window; degrades to non-interactive if run headless.
+plot = ["matplotlib>=3.7"]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["vitals*"]

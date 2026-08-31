@@ -1,0 +1,64 @@
+<mujoco model="ramp_descent_high_friction">
+  <!-- Z-up. Identical geometry to ramp_descent.xml (same solved ramp/leg
+       placement -- see that file's own comments for the world-space
+       top/toe derivation, not re-derived here) -- the ONLY change is the
+       default friction triple, substantially higher than the base scene's
+       (sliding, torsional, rolling) = (0.6, 0.005, 0.03). Purpose (2026-08,
+       requested directly: "variations that incorporate friction and other
+       more complex physics"): give sigma_kinematic/estimate_threshold a
+       genuinely different reference-ensemble SHAPE to calibrate against --
+       the base scene's ball coasts across the flat section at roughly
+       constant velocity (rolling friction 0.03 is deliberately just enough
+       to not coast forever, AGENT.md defect #5, not enough to decelerate
+       fast); this scene's ball should visibly decelerate to a stop within
+       the clip, a qualitatively different kinematic regime (decaying
+       velocity, not near-constant), not just a new geometry on the same
+       regime.
+
+       condim="6" (required for torsional/rolling friction to be enforced
+       at all -- AGENT.md defect #5, MuJoCo's default condim=3 silently
+       ignores those two components) is already present on the ball geom
+       below, same as the base scene.
+
+       Friction values below are a STARTING POINT, not yet calibrated --
+       tune during GATE 1a/1b (scripts/run_l0_demo.py) the same documented
+       way projectile.xml's own lam was tuned: vary friction, hold every
+       mutant/severity constant, re-run, until both gates pass (AGENT.md's
+       "isolate what the threshold responds to" method). -->
+  <option timestep="0.002" gravity="0 0 -9.81"/>
+  <visual>
+    <global offwidth="1280" offheight="720"/>
+  </visual>
+
+  <default>
+    <!-- ~2x sliding, ~2x torsional, 5x rolling friction vs. the base scene
+         -- rolling is the dominant lever for "does it stop," sliding/
+         torsional bumped too so the ball doesn't just skid instead of
+         rolling-and-decelerating. -->
+    <geom friction="1.2 0.01 0.15" solref="0.01 1"/>
+  </default>
+
+  <worldbody>
+    <light diffuse="0.8 0.8 0.8" pos="0 0 4" dir="0 0 -1"/>
+
+    <geom name="floor" type="plane" size="6 3 0.1" pos="1.6 0 0" rgba="0.5 0.5 0.5 1"/>
+
+    <geom name="ramp" type="box" size="1.917 0.6 0.05" pos="-2.6165 0 0.8559"
+          euler="0 28 0" rgba="0.6 0.4 0.3 1"/>
+
+    <geom name="ramp_leg_1a" type="box" size="0.06 0.06 0.7533" pos="-3.9 0.5 0.7533"
+          contype="0" conaffinity="0" rgba="0.45 0.3 0.2 1"/>
+    <geom name="ramp_leg_1b" type="box" size="0.06 0.06 0.7533" pos="-3.9 -0.5 0.7533"
+          contype="0" conaffinity="0" rgba="0.45 0.3 0.2 1"/>
+    <geom name="ramp_leg_2a" type="box" size="0.06 0.06 0.3014" pos="-2.2 0.5 0.3014"
+          contype="0" conaffinity="0" rgba="0.45 0.3 0.2 1"/>
+    <geom name="ramp_leg_2b" type="box" size="0.06 0.06 0.3014" pos="-2.2 -0.5 0.3014"
+          contype="0" conaffinity="0" rgba="0.45 0.3 0.2 1"/>
+
+    <body name="ball" pos="-3.3 0 1.7">
+      <freejoint/>
+      <geom name="ball_geom" type="sphere" size="0.15" mass="0.5" rgba="0.8 0.1 0.1 1"
+            condim="6"/>
+    </body>
+  </worldbody>
+</mujoco>

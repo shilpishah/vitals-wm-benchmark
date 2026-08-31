@@ -1,0 +1,10 @@
+# Declarative EpisodeSpec -- the corpus regenerates from this alone.
+name: ramp_descent
+scene: scenes/ramp_descent.xml
+target_property: P4       # dynamics -- does motion down the incline stay kinematically plausible
+band: I
+lam: 1.0                  # swept over {0.25, 0.5, 1, 2, 4} for the M1 lambda-spread curve
+n_reference: 30            # M
+horizon_s: 6.0
+fps: 30
+seed: 0

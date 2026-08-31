@@ -1,0 +1,99 @@
+<mujoco model="occlusion_corridor_distractor">
+  <!-- Z-up. Flat ground only -- no incline. Same base scenario as
+       occlusion_corridor.xml (see that file's own docstring for why P2 is
+       tested in isolation from ramp kinematics), PLUS one addition: a
+       second, independently-moving body ("decoy") that is never mutated,
+       never scored, and has no causal effect on the tracked ball
+       (contype/conaffinity excluded from it, same treatment as the wall)
+       -- it exists purely to test SPECIFICITY (AGENT.md P5's "...and
+       *only* those [effects]", the lite/buildable version discussed
+       2026-08 rather than full causal-cone P5): does Phi's re-
+       identification correctly ignore a visually salient but causally
+       irrelevant candidate, or does it get fooled the way GATE 2's own
+       null_2/null_8 instances incidentally were (AGENT.md 6, defects
+       found during that sweep)?
+
+       Deliberately NOT identical to the ball -- a different color (blue,
+       not red) so appearance-based re-identification (DINO) has real
+       signal available; same size and a comparable push so a naive
+       distance-only check does NOT have an easy time (the whole point is
+       a genuine temptation, not a strawman). Different y-lane (0.4 vs the
+       ball's 0) so position alone can also, in principle, disambiguate
+       them -- the test is whether Phi actually USES the signals available
+       to it, not whether disambiguation is possible in principle.
+
+       Starting position/velocity chosen so the decoy tends to settle near
+       the SAME x-region as the ball's own wall crossing (see
+       occlusion_corridor manifest's note on lam=6.0's 3-way outcome split,
+       and GATE 2's own finding that ~90% of null instances rest within
+       0.2m of OCCLUSION_CORRIDOR_WALL_BOUNDS's coarse edge) -- this is a
+       deliberately targeted stress test of that exact finding, not an
+       arbitrary placement. -->
+  <option timestep="0.002" gravity="0 0 -9.81"/>
+  <visual>
+    <global offwidth="1280" offheight="720"/>
+  </visual>
+
+  <default>
+    <geom friction="0.6 0.005 0.03" solref="0.01 1"/>
+  </default>
+
+  <worldbody>
+    <light diffuse="0.8 0.8 0.8" pos="4 0 4" dir="0 0 -1"/>
+
+    <!-- contype/conaffinity groups: floor=1, ball=2, decoy=4. Floor is
+         affected by both ball(2) and decoy(4) so both roll on the ground;
+         ball and decoy share no bit with each other so they pass through
+         one another (contype/conaffinity is symmetric per-pair, and the
+         default (1,1) every geom gets otherwise would make ball and decoy
+         collide too -- caught the hard way: an earlier version zeroed the
+         decoy's contype/conaffinity entirely, which also silently
+         disabled its collision with the FLOOR, and it fell straight
+         through into freefall). -->
+    <geom name="floor" type="plane" size="9 3 0.1" pos="6 0 0" rgba="0.5 0.5 0.5 1"
+          contype="1" conaffinity="6"/>
+
+    <geom name="wall" type="box" size="0.75 0.6 0.5" pos="5 0 0.5"
+          contype="0" conaffinity="0" rgba="0.3 0.3 0.3 1"/>
+    <!-- Cosmetic "lit opening" decal -- same treatment, same reasoning,
+         same measured-unchanged occlusion geometry as occlusion_
+         corridor.xml's own copy of this comment; see that file. -->
+    <geom name="wall_opening" type="box" size="0.55 0.02 0.35" pos="5 0.61 0.5"
+          contype="0" conaffinity="0" rgba="0.95 0.95 0.75 1"/>
+
+    <!-- Ball MUST stay body index 0 (first free body declared) -- every
+         downstream consumer (detect/statistics.py's obj=0 default,
+         mutants/library.py's obj=0 default, episode-generation scripts'
+         gt.segmentation==0) assumes this ordering, not just this file's
+         own keyframe below. -->
+    <body name="ball" pos="0 0 0.15">
+      <freejoint/>
+      <geom name="ball_geom" type="sphere" size="0.15" mass="0.5" rgba="0.8 0.1 0.1 1"
+            condim="6" contype="2" conaffinity="1"/>
+    </body>
+
+    <!-- Decoy: rolls on the floor (contype=4 matched by floor's
+         conaffinity) but shares no contype/conaffinity bit with the ball
+         (group 2), so the two pass through one another -- a purely visual
+         nuisance, never a physical one. If it collided, this would be a
+         SENSITIVITY test (does the model react to a real causal event),
+         not a specificity test -- deliberately kept separate (see the
+         2026-08 scene-diversity discussion; sensitivity needs a real
+         collision, tracked as a phase 2/multi-object concern). -->
+    <body name="decoy" pos="-0.5 0.4 0.15">
+      <freejoint/>
+      <geom name="decoy_geom" type="sphere" size="0.15" mass="0.5" rgba="0.1 0.1 0.8 1"
+            condim="6" contype="4" conaffinity="1"/>
+    </body>
+  </worldbody>
+
+  <keyframe>
+    <!-- Ball: identical baseline to occlusion_corridor.xml. Decoy: starts
+         slightly behind (x=-0.5) and in a different lane (y=0.4), pushed
+         at a comparable (not identical) speed so it settles near the same
+         x-region as the ball across the reference ensemble without being
+         a mechanical duplicate. -->
+    <key name="push" qpos="0 0 0.15 1 0 0 0   -0.5 0.4 0.15 1 0 0 0"
+                     qvel="4.3 0 0 0 0 0      5.4 0 0 0 0 0"/>
+  </keyframe>
+</mujoco>

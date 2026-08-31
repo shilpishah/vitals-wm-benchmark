@@ -1,0 +1,75 @@
+{
+  "scenario": "ramp_descent_high_friction",
+  "target_property": "P4",
+  "backend": "cosmos",
+  "M": 30,
+  "lam": 0.25,
+  "t_max": 3.0,
+  "thresholds_median": {
+    "R2": 0.0,
+    "R5": 3.9179453210077813
+  },
+  "gate_1a": {
+    "false_termination_rate": null,
+    "target_alpha": 0.01,
+    "passed": null
+  },
+  "gate_1b": [],
+  "survival": {
+    "n": 5,
+    "vi50": 1.0,
+    "vi50_ci95": [
+      1.0,
+      1.0
+    ],
+    "censoring_rate": 0.0,
+    "termination_profile": {
+      "R5": 1.0
+    },
+    "kaplan_meier": {
+      "t": [
+        0.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "S": [
+        1.0,
+        0.8,
+        0.6000000000000001,
+        0.4000000000000001,
+        0.20000000000000004,
+        0.0
+      ]
+    },
+    "events": [
+      {
+        "time": 1.0,
+        "risk": "R5",
+        "censored": false
+      },
+      {
+        "time": 1.0,
+        "risk": "R5",
+        "censored": false
+      },
+      {
+        "time": 1.0,
+        "risk": "R5",
+        "censored": false
+      },
+      {
+        "time": 1.0,
+        "risk": "R5",
+        "censored": false
+      },
+      {
+        "time": 1.0,
+        "risk": "R5",
+        "censored": false
+      }
+    ]
+  }
+}

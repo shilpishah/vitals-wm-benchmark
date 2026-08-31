@@ -1,0 +1,21 @@
+# Declarative EpisodeSpec -- the corpus regenerates from this alone.
+# Phase 1 of the 2026-08 scene-diversity plan: identical to
+# occlusion_corridor.yaml in every scored respect (same target property,
+# same lambda, same perturbation mode) -- the ONLY difference is the scene
+# file, which adds a non-colliding, non-scored decoy body (see
+# occlusion_corridor_distractor.xml's own docstring). Detection/threshold
+# math is untouched: sigma_existence/sigma_kinematic default to obj=0 (the
+# ball, still body index 0), so the decoy never enters the scored state at
+# all -- this manifest exists to test whether Phi's PIXEL-level
+# re-identification stays correct in its presence, not to change what's
+# measured in state space.
+name: occlusion_corridor_distractor
+scene: scenes/occlusion_corridor_distractor.xml
+target_property: P2
+band: I
+lam: 6.0
+n_reference: 30
+horizon_s: 8.0
+fps: 30
+seed: 0
+perturb_mode: velocity_x_only

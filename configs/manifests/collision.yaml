@@ -1,0 +1,24 @@
+# Declarative EpisodeSpec -- the corpus regenerates from this alone.
+# 2026-08, Phase 1 scenario diversity: rigid-body collision (P4) -- a
+# genuinely new kinematic regime, not a variant of ramp_descent/projectile.
+# Only the cue ball (body index 0) is scored this pass -- see scenes/
+# collision.xml's own module comment for the full v1-scope reasoning.
+name: collision
+scene: scenes/collision.xml
+target_property: P4
+band: I
+lam: 2.0                  # 2026-08: raised from 1.0 after GATE 2 found real reconstruction noise
+                           # (0.061m, well within this project's own accuracy floor) still tripped R5
+                           # near the collision moment -- the reference ensemble's own collision-TIMING
+                           # variance at lam=1.0 (std=0.067s) was too tight for that noise to hide in.
+                           # Checked directly, not assumed: collision-timing std scales roughly linearly
+                           # with lam (0.067s at 1.0, 0.138s at 2.0), and every one of 30 references
+                           # still collides reliably at lam=2.0 (30/30, same as lam=1.0) -- widening
+                           # lam here doesn't risk losing the collision event itself.
+n_reference: 30            # M
+horizon_s: 4.0
+fps: 30
+seed: 0
+perturb_mode: velocity_x_only   # confines perturbation to along-track speed -- a lateral (y) nudge
+                                 # could make the cue ball miss the target ball entirely, which
+                                 # occlusion_corridor's own identical convention already exists to avoid

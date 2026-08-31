@@ -1,0 +1,25 @@
+# Declarative EpisodeSpec -- the corpus regenerates from this alone.
+name: occlusion_corridor
+scene: scenes/occlusion_corridor.xml
+target_property: P2       # existence/identity persistence -- isolated from ramp kinematics (see ramp_descent.yaml)
+band: I
+# lam=6.0 chosen (not defaulted to 1.0 like ramp_descent, and outside the
+# standard {0.25,0.5,1,2,4} grid) because the whole point of this scenario
+# is the three-way split in final position -- stop short of the wall, stop
+# occluded behind it, or roll far enough to re-emerge. At lam=1.0 the
+# ensemble is too tight (all 30 land behind the wall) to exercise all three
+# outcomes. Measured at n_reference=30, perturb_mode=velocity_x_only:
+# lam=6.0 -> 5 short / 20 behind / 5 re-emerge. This scenario's own sweep
+# grid extends the standard one with 6 as the nominal point; still a swept
+# parameter, not a fixed one (M7 ranking-invariance still applies).
+lam: 6.0
+n_reference: 30            # M
+horizon_s: 8.0              # longer than ramp_descent -- give slow rollouts time to fully settle
+fps: 30
+seed: 0
+# The ball's only physically-free variable is along-track speed -- isotropic
+# 3D perturbation (ramp_descent's default) also perturbs vertical
+# position/velocity, which a unilateral floor contact resolves as an actual
+# bounce at this lambda, corrupting R5 detection with motion this scenario
+# never meant to test. See physics/perturb.py::sample_velocity_perturbation.
+perturb_mode: velocity_x_only

@@ -1,0 +1,88 @@
+<mujoco model="occlusion_corridor">
+  <!-- Z-up. Flat ground only -- no incline. This scene tests ONE thing:
+       entity persistence across occlusion (P2/R2), isolated from ramp
+       kinematics (see ramp_descent.xml for that, kept deliberately separate
+       -- AGENT.md 3.6, a model can nail one and hallucinate the other, so
+       conflating them would make a failure ambiguous about which property
+       broke).
+
+       The ball needs a push since there's no incline to accelerate it --
+       supplied by a <keyframe> baseline qvel, not a hardcoded velocity in
+       physics/runner.py, so the "nominal initial configuration" (s_0, in
+       AGENT.md's terms) stays a property of the scene, with Sigma
+       perturbing on top of it exactly as it does everywhere else.
+
+       The wall is LONG along the direction of travel (x half-size 0.75, a
+       1.5m occluded zone) -- not a thin marker line. Combined with
+       lambda-scale perturbation on the initial speed, this is deliberately
+       tuned (see occlusion_corridor manifest / visualize script) so the
+       reference ensemble spans three qualitatively different outcomes:
+       stop short of the wall, stop while still behind it, or roll far
+       enough to re-emerge on the far side. -->
+  <option timestep="0.002" gravity="0 0 -9.81"/>
+  <visual>
+    <global offwidth="1280" offheight="720"/>
+  </visual>
+
+  <default>
+    <geom friction="0.6 0.005 0.03" solref="0.01 1"/>
+  </default>
+
+  <worldbody>
+    <light diffuse="0.8 0.8 0.8" pos="4 0 4" dir="0 0 -1"/>
+
+    <geom name="floor" type="plane" size="9 3 0.1" pos="6 0 0" rgba="0.5 0.5 0.5 1"/>
+
+    <!-- Occluding wall, non-colliding (contype/conaffinity 0) -- same
+         treatment as ramp_descent's original wall: it has zero physical
+         effect until a renderer + Phi exist (M3/M4) to actually occlude a
+         camera's view of the ball. For now "behind the wall" is read
+         directly off ground-truth x-position, which is honest since there
+         is no perception step yet to fake. -->
+    <geom name="wall" type="box" size="0.75 0.6 0.5" pos="5 0 0.5"
+          contype="0" conaffinity="0" rgba="0.3 0.3 0.3 1"/>
+    <!-- alpha MUST be 1 (fully opaque) -- this is an occlusion test. Alpha
+         < 1 lets the renderer alpha-blend a faint ghost of anything behind
+         the wall into the RGB frame, which a segmentation/tracking model
+         (unlike the ID-buffer-based ground-truth mask, which uses a hard
+         depth test and was never actually affected by this) could pick up
+         on -- silently turning "full occlusion" into "very low visibility,"
+         which is a different and much easier test. -->
+
+    <!-- Cosmetic "lit opening" decal (2026-08, requested directly: "is
+         there any way to make the inside of the corridor lit... so it's
+         clear that it's open" -- a real generative-model confound: a
+         plain solid gray box reads visually as a dead-end wall, which
+         could bias Cosmos/Wan toward generating the ball stopping/
+         bouncing rather than continuing, regardless of what the frozen
+         text prompt says. A HOLLOW box was tried first and rejected
+         (scripts/measure_occluder_visibility.py): from this scene's own
+         camera (elevation=-45, far off-axis in y), the near face is what
+         actually blocks the ray to the ball -- verified directly by
+         raytracing the camera geometry, not assumed -- so a true opening
+         there would let the ball show through and break the occlusion
+         test entirely, and a hollow-but-covered version still rendered as
+         a solid silhouette (confirmed by rendering it). This decal is
+         purely a second, thin, non-colliding geom sitting just in front
+         of the SAME unchanged wall face -- the occluding geometry itself
+         is byte-identical to before (re-verified:
+         OCCLUSION_CORRIDOR_WALL_BOUNDS unchanged), only the near face's
+         appearance changes, to a pale inset panel reading as a lit
+         doorway/archway rather than a blank dead end. -->
+    <geom name="wall_opening" type="box" size="0.55 0.02 0.35" pos="5 0.61 0.5"
+          contype="0" conaffinity="0" rgba="0.95 0.95 0.75 1"/>
+
+    <body name="ball" pos="0 0 0.15">
+      <freejoint/>
+      <geom name="ball_geom" type="sphere" size="0.15" mass="0.5" rgba="0.8 0.1 0.1 1"
+            condim="6"/>
+    </body>
+  </worldbody>
+
+  <keyframe>
+    <!-- Baseline s_0: ball at rest on the floor at x=0, given a push of
+         2.6 m/s down the corridor. Sigma perturbs dpos/dvel on top of this
+         at rollout time (physics/runner.py). -->
+    <key name="push" qpos="0 0 0.15 1 0 0 0" qvel="4.3 0 0 0 0 0"/>
+  </keyframe>
+</mujoco>
