@@ -151,20 +151,5 @@ ground-truth state. The event-time difference is the number you publish.
 interval in free flight and a short one under contact. If it does not, the
 metric is wrong, not the baseline.
 
-## Note from the first run
-
-`velocity_freeze` injected at t=2.0s did not fire, and this is correct: by
-then the ball has settled into steady horizontal motion, so freezing velocity
-
-is a no-op. Injected during the fall it fires every time. A defect is only
-detectable when the true dynamics are actually changing at the injection
-point -- which is the minimum-detectable-defect concept, and it means mutant
-injection times must be sampled where the dynamics are live.
-
-## Scope for the first six weeks
-
-In: entity persistence (R1), dynamics (R3), calibration. 15 scenarios,
-M=20, 3 lambda levels, 15s horizon, 3-4 open-weight models.
-
-Out: relational/support detection and its learned relation head, frame
-structure, causal consistency, multi-view, hazard regression.
+## Visualizer
+Check out some of the results: [https://vitals-visualizer.vercel.app/index.html]([url](https://vitals-visualizer.vercel.app/index.html))
