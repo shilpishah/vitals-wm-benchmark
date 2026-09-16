@@ -436,7 +436,7 @@ def test_forgiven_flicker_stays_present_without_a_reid_event():
     is ever generated for it, by design), so it must NOT require reid_event
     closure to count as present -- unlike a real, searched-for gap. Found on
     a completely undisturbed (`null` mutant) GATE 2 episode: this exact
-    unforgiven-flicker bug alone accounted for 4/10 spurious R2 firings on
+    unforgiven-flicker bug alone accounted for 4/10 spurious R1 firings on
     episodes with n_reid_events=0 (no search ever ran)."""
     from vitals.phi.reconstruct import _existence_mask
     T = 10
@@ -463,7 +463,7 @@ def test_occluder_explained_gap_counts_as_present():
     predicted position inside a known occluder -- physics correctly never
     even offering a search target is not evidence the object is gone, it's
     the SAME status ordinary state-space-invisible occlusion already has.
-    This was the actual fix for GATE 2's ~90% R2 false-positive rate on
+    This was the actual fix for GATE 2's ~90% R1 false-positive rate on
     completely undisturbed episodes, after two threshold-side recalibration
     attempts both failed by destroying sensitivity instead."""
     from vitals.phi.reconstruct import _existence_mask

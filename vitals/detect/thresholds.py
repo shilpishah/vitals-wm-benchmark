@@ -40,7 +40,7 @@ def leave_one_out_sigma(refs, stat_fn):
 
 def _bin_scale(loo, n_bins):
     """Per-time-bin median of the LOO curves -- a shape reference, not a
-    threshold. Floored away from zero (e.g. R2 is exactly 0 almost
+    threshold. Floored away from zero (e.g. R1 is exactly 0 almost
     everywhere for a defect-free scene, which is correct, not degenerate)."""
     M, T = loo.shape
     edges = np.linspace(0, T, n_bins + 1).astype(int)
@@ -85,7 +85,7 @@ def _defined_cutoff(loo, min_defined_frac):
     theta is inf at every single time bin, not just the occluded tail.
     Bounding calibration to where the ensemble stays sufficiently observed
     restores a meaningful threshold for the well-observed region and is
-    honest about the rest -- R5 genuinely can't assess what it can't see,
+    honest about the rest -- R3 genuinely can't assess what it can't see,
     for most of the ensemble, past that point (AGENT.md defect #13)."""
     finite_frac = np.isfinite(loo).mean(axis=0)
     below = np.where(finite_frac < min_defined_frac)[0]
@@ -113,7 +113,7 @@ def estimate_threshold(refs, stat_fn, alpha=0.01, n_bins=10, min_defined_frac=No
     `_defined_cutoff`) -- for `t` past that point, `theta(t) = inf`: the
     honest statement that this statistic can no longer be meaningfully
     calibrated there, not a claim that nothing can go wrong. Precedence
-    (events.py) means a higher-ranked risk (e.g. R2/existence) remains the
+    (events.py) means a higher-ranked risk (e.g. R1/existence) remains the
     operative test during that stretch regardless.
 
     Defaults to `1 - alpha`, not some fixed value like 0.5 -- and this

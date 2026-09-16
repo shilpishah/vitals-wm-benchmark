@@ -1,0 +1,24 @@
+# Declarative EpisodeSpec -- the corpus regenerates from this alone.
+# AGENT.md M9 (2026-09-13): the first SOFT-BODY scenario and a NEW
+# measurement modality. A deformable ellipsoid is dropped from 1.2m with a
+# 2 m/s push along +x, lands, squashes/bulges, rebounds and tumbles.
+# target_property: P3 (relational/constraint persistence) -- pre-registered
+# for the new R6 CONSERVATION channel (silhouette-area ratio vs. the
+# reference band), which sits between R1 and R2 in precedence; R1/R3/R4
+# score the centroid exactly as for a rigid body, and sigma_shape is the
+# shape companion of R3. Reference ensemble: INITIAL CONDITIONS ONLY
+# (decision 5) -- the material is part of s_0; perturb_mode velocity_x_only
+# on the single actor (the flex), same convention as the corridor.
+# n_reference 100: the interpenetration precedent for a 3+ channel
+# false-termination budget (R1/R6/R3 here). GATE 1/2 floors are re-measured
+# for this regime, never inherited (decision 3).
+name: soft_drop
+scene: scenes/soft_drop.xml
+target_property: P3
+band: I
+lam: 2.0
+n_reference: 100
+horizon_s: 4.0
+fps: 30
+seed: 0
+perturb_mode: velocity_x_only

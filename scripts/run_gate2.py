@@ -52,23 +52,32 @@ import json
 import numpy as np
 import yaml
 import modal
+import tempfile
 from PIL import Image
 
 from vitals.types import EpisodeSpec, Trajectory
 from vitals.physics import make_backend
 from vitals.mutants import library as mut
-from vitals.detect.statistics import sigma_existence, sigma_kinematic, kinematic_axes_for
+from vitals.detect.statistics import (sigma_existence, sigma_kinematic, kinematic_axes_for,
+                                      sigma_conservation, sigma_shape)
 from vitals.detect.thresholds import estimate_threshold
 from vitals.detect.events import extract_event
 from vitals.phi import scene_geometry as sg
-from vitals.render.mujoco_renderer import MujocoRenderer
+from vitals.physics import softbody as sb
+from vitals.render.mujoco_renderer import MujocoRenderer, camera_pose
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-SCRATCH = pathlib.Path("/private/tmp/claude-501/-Users-shilpishah-Downloads-important-code-research-midcentury"
-                        "/4b7c4a29-48cf-41cf-bb25-20c1250e0978/scratchpad/gate2_episodes")
+# Episode frames/masks (large, transient) go to VITALS_SCRATCH if set, else the
+# system temp dir -- this WAS a hardcoded path into one particular assistant
+# session's scratchpad (found 2026-09-12: two new scenarios' GATE 2 results
+# silently landed in a directory belonging to a session from August). The
+# per-instance results table is ALSO written to results/gate2_instances_
+# <scenario>_<backend>.json below, which is what render_gate2_report.py reads.
+SCRATCH = pathlib.Path(os.environ.get("VITALS_SCRATCH", tempfile.gettempdir())) / "vitals_gate2_episodes"
 SCRATCH.mkdir(parents=True, exist_ok=True)
 
 MANIFEST_PATH = os.environ.get("VITALS_MANIFEST", "configs/manifests/occlusion_corridor.yaml")
+BACKEND = os.environ.get("VITALS_BACKEND", "mujoco")   # names the results/gate2_instances_<scenario>_<backend>.json written at the end
 manifest = yaml.safe_load((ROOT / MANIFEST_PATH).read_text())
 SPEC = EpisodeSpec(name=manifest["name"], scene=manifest["scene"], target_property=manifest["target_property"],
                     band=manifest["band"], lam=manifest["lam"], n_reference=manifest["n_reference"],
@@ -91,7 +100,7 @@ N_PER_MUTANT = 8
 
 # Same set, same reasoning, as run_l0_demo.py's own NEAR_FLAT_SCENARIOS --
 # duplicated (not imported) since these are two independent scripts kept
-# in sync by hand, the same convention this file's own R5-axes comment
+# in sync by hand, the same convention this file's own R3-axes comment
 # already documents for why that's acceptable here. Keep the two
 # constants identical if either ever changes.
 NEAR_FLAT_SCENARIOS = ("occlusion_corridor", "collision")
@@ -100,7 +109,7 @@ CAM = sg.get(SPEC.name)["camera"]
 PARK = np.array([0.0, 0.0, -50.0])   # off-camera park position, render-only -- see module docstring
 POSITION_ERROR_ID_SWITCH_M = 0.5     # ~3x the ball's own diameter -- clearly a different object
 
-# R5's own axes restriction (AGENT.md M2.6) -- same
+# R3's own axes restriction (AGENT.md M2.6) -- same
 # functools.partial(sigma_kinematic, axes=kinematic_axes_for(SPEC.name))
 # pattern as run_l0_demo.py's own STATS, and MUST match it exactly: this
 # script's whole point is comparing an L1 candidate against GATE 1's own
@@ -108,7 +117,7 @@ POSITION_ERROR_ID_SWITCH_M = 0.5     # ~3x the ball's own diameter -- clearly a 
 # mismatched axes restriction between the two scripts would silently
 # compare incompatible statistics.
 #
-# R2's own obj=0 restriction (2026-08, a real bug found running GATE 2 on
+# R1's own obj=0 restriction (2026-08, a real bug found running GATE 2 on
 # occlusion_corridor_distractor for the first time -- see sigma_
 # existence's own docstring for the full mechanism) is DELIBERATELY NOT
 # shared with run_l0_demo.py's own STATS: GATE 2's own L1 candidates
@@ -123,12 +132,42 @@ POSITION_ERROR_ID_SWITCH_M = 0.5     # ~3x the ball's own diameter -- clearly a 
 # single-object only). obj=0 is a strict no-op for every K=1 scenario
 # (occlusion_corridor, ramp_descent_high_friction, projectile) -- count
 # and single-object presence are identical there.
-STATS = {"R2": functools.partial(sigma_existence, obj=0),
-         "R5": functools.partial(sigma_kinematic, axes=kinematic_axes_for(SPEC.name))}
+STATS = {"R1": functools.partial(sigma_existence, obj=0),
+         "R3": functools.partial(sigma_kinematic, axes=kinematic_axes_for(SPEC.name))}
 roll = make_backend("mujoco", scene=SPEC.scene)
 renderer = MujocoRenderer(SPEC.scene, height=240, width=320)
 
-APP_NAME = "vitals-phi"
+# Soft-body scenarios (AGENT.md M9, 2026-09-14): same wiring as
+# run_l0_demo.py's own SOFT branch -- R6 conservation + R7 shape join
+# STATS, and every state-space trajectory gets its shape descriptors
+# through THIS script's render camera at THIS script's render resolution
+# (240x320, not GATE 1's 360x640: area is in pixels, so the state side
+# must be projected at the resolution Phi's masks come from -- the
+# thresholds below are calibrated on those references, never reused from
+# GATE 1's run). Rigid scenarios: SOFT is False, nothing changes.
+SOFT = bool(sg.SCENES.get(SPEC.name, {}).get("soft_body", False))
+if SOFT:
+    STATS = dict(STATS, R6=sigma_conservation, R7=sigma_shape)
+    _CAM_POS, _CAM_MAT, _FOVY = camera_pose(SPEC.scene, CAM[0], height=renderer.height, width=renderer.width)
+    _base_roll = roll
+
+    def attach(traj):
+        if traj.shape is None and "flex_vertices" in traj.meta:
+            sb.attach_shape(traj, _CAM_POS, _CAM_MAT, _FOVY, renderer.width, renderer.height)
+        return traj
+
+    def roll(spec, seed):
+        return attach(_base_roll(spec, seed))
+else:
+    def attach(traj):
+        return traj
+
+# VITALS_PHI_APP (2026-09-14): a separately-named deployment of
+# remote/modal_app.py (`modal deploy --name vitals-phi-gate2 remote/
+# modal_app.py`) lets a GATE 2 pass use freshly-deployed Phi code while a
+# real-model population is in flight on `vitals-phi` -- that app is never
+# redeployed mid-run (an in-flight population's own Phi calls go there).
+APP_NAME = os.environ.get("VITALS_PHI_APP", "vitals-phi")
 VOLUME_NAME = "vitals-model-cache"
 
 
@@ -137,13 +176,46 @@ def build_reference(spec, M, seed0=1000):
 
 
 def truncate(traj, T):
+    meta = dict(traj.meta)
+    if "flex_vertices" in meta:      # keep the vertex cloud the same length as the trajectory
+        meta["flex_vertices"] = {k: v[:T] for k, v in meta["flex_vertices"].items()}
     return Trajectory(t=traj.t[:T].copy(), pos=traj.pos[:T].copy(), quat=traj.quat[:T].copy(),
-                       present=traj.present[:T].copy(), names=list(traj.names), meta=dict(traj.meta))
+                       present=traj.present[:T].copy(), names=list(traj.names), meta=meta,
+                       shape=None if traj.shape is None else traj.shape[:T].copy())
 
 
 def evaluate(cand, refs, thetas, dt, t_max):
+    cand = attach(cand)      # mutants drop `shape`; re-derived from the (mutated) vertex cloud
     sigmas = {k: fn(cand, refs) for k, fn in STATS.items()}
     return extract_event(sigmas, thetas, dt, t_max)
+
+
+# --- Phi-measured reference band for the soft-body channels (2026-09-14) ---
+# results/phi_refs_<scenario>.npz (scripts/build_phi_references.py): the
+# scenario's own references rendered and run through the identical Phi
+# path. L1 candidates' R6/R7 are scored against THIS band with thresholds
+# LOO-calibrated on it (same instrument both sides -- SAM2's mask of a
+# resting soft body is ~13% larger than the rendered silhouette, a
+# systematic error the state-space band cannot absorb; AGENT.md T10).
+# R1/R3 for L1 keep the state-space band and thresholds as everywhere.
+PHI_REFS_PATH = ROOT / "results" / f"phi_refs_{SPEC.name}.npz"
+PHI_CHANNELS = ("R6", "R7")
+
+
+def load_phi_refs():
+    return sb.load_phi_refs(PHI_REFS_PATH) if SOFT else None
+
+
+def evaluate_l1(cand, refs, thetas, phi_refs, thetas_phi, dt, t_max):
+    """Pixel-measured candidate: state band for R1/R3, Phi band for R6/R7."""
+    sigmas = {k: fn(cand, refs) for k, fn in STATS.items() if k not in PHI_CHANNELS or phi_refs is None}
+    th = dict(thetas)
+    if phi_refs is not None:
+        for k in PHI_CHANNELS:
+            if k in STATS:
+                sigmas[k] = STATS[k](cand, phi_refs)
+                th[k] = thetas_phi[k]
+    return extract_event(sigmas, th, dt, t_max)
 
 
 def build_instances():
@@ -208,6 +280,28 @@ def build_instances():
     for i in range(N_NULL):
         base = roll(SPEC, seed); seed += 1
         out.append(("null", mut.null(base), f"{prefix}_null_{i}"))
+    if SOFT:
+        # The soft-body set (AGENT.md M9 decision 4), same parameters as
+        # GATE 1's own build_demo_cases so the two gates test the same
+        # defects: vanish (R1), drift at 1.5s (R3: the settled body starts
+        # sliding at 0.3 m/s -- GATE 1's own in-flight trajectory mutants
+        # fall inside the pixel path's unreliable settling prefix,
+        # scene_geometry.SOFT_DROP_SETTLING_FRAMES, so they are invisible
+        # to Phi by construction, and velocity_freeze has nothing to
+        # freeze once the body is at rest (1/8 at L0, 2026-09-14);
+        # wrong_damping is a no-op on this material, see run_l0_demo.py),
+        # wrong_stiffness and frozen_deformation (material: R6/R7, the
+        # attribution test), volume_leak (R6).
+        soft_cases = [("vanish", lambda b: mut.vanish(b, t_star=T_STAR)),
+                      ("drift", lambda b: mut.drift(b, t_star=1.5)),
+                      ("wrong_stiffness", lambda b: mut.wrong_stiffness(b, factor=2.5)),
+                      ("frozen_deformation", lambda b: mut.frozen_deformation(b)),
+                      ("volume_leak", lambda b: mut.volume_leak(b, t_star=T_STAR))]
+        for mtype, make in soft_cases:
+            for i in range(N_PER_MUTANT):
+                base = roll(SPEC, seed); seed += 1
+                out.append((mtype, make(base), f"{prefix}_{mtype}_{i}"))
+        return out
     for i in range(N_PER_MUTANT):
         base = roll(SPEC, seed); seed += 1
         out.append(("vanish", mut.vanish(base, t_star=T_STAR), f"{prefix}_vanish_{i}"))
@@ -241,6 +335,13 @@ def render_episode(traj, name):
     render_traj = traj.copy()
     hidden = ~traj.present[:, 0] | np.isnan(traj.pos[:, 0]).any(axis=-1)
     render_traj.pos[hidden, 0] = PARK
+    if "flex_vertices" in traj.meta and traj.names[0] in traj.meta["flex_vertices"]:
+        # a flex is placed from its vertex cloud, not from pos: park the
+        # whole cloud (rigidly, about its centroid) on hidden frames
+        V = traj.meta["flex_vertices"][traj.names[0]].copy()
+        c = np.nanmean(V, axis=1, keepdims=True)
+        V[hidden] = np.nan_to_num(V[hidden] - c[hidden]) + PARK
+        render_traj.meta["flex_vertices"] = dict(render_traj.meta["flex_vertices"], **{traj.names[0]: V})
 
     frames, gt = renderer.render(render_traj, cameras=CAM)
 
@@ -296,7 +397,11 @@ def traj_from_modal_result(res):
             pos[i, 0] = row[0]
     present = np.array(res["traj_present"], dtype=bool)
     quat = np.tile(np.array([1.0, 0.0, 0.0, 0.0]), (T, 1, 1))
-    return Trajectory(t=t, pos=pos, quat=quat, present=present, names=["ball"])
+    shape = None
+    if res.get("traj_shape") is not None:
+        shape = np.array([[[np.nan if v is None else v for v in row] for row in fr] for fr in res["traj_shape"]],
+                         dtype=float)
+    return Trajectory(t=t, pos=pos, quat=quat, present=present, names=["ball"], shape=shape)
 
 
 def position_error(l0_cand, l1_traj):
@@ -350,6 +455,15 @@ def main():
     # t < T_RENDER is identical either way, this only trims the unused tail.
     thetas_render = {k: v[:T_RENDER] for k, v in thetas.items()}
     print(f"reference ensemble M={M} built, thresholds calibrated")
+    phi_refs = load_phi_refs()
+    thetas_phi = None
+    if phi_refs is not None:
+        thetas_phi = {k: estimate_threshold(phi_refs, STATS[k], alpha=ALPHA)[:T_RENDER] for k in PHI_CHANNELS if k in STATS}
+        print(f"Phi-measured reference band: {len(phi_refs)} refs from {PHI_REFS_PATH.name}; "
+              + "  ".join(f"theta_{k} median={np.nanmedian(v):.2f} (state-band {np.nanmedian(thetas_render[k]):.2f})"
+                          for k, v in thetas_phi.items()))
+    elif SOFT:
+        print(f"WARNING: no {PHI_REFS_PATH.name} -- L1 R6/R7 scored against the STATE band (known ~13% area bias, AGENT.md T10)")
 
     instances = build_instances()
     print(f"{len(instances)} mutant instances built")
@@ -376,7 +490,7 @@ def main():
 
         l0_event = evaluate(m.traj, refs, thetas_render, dt, t_max_render)
         l1_traj = traj_from_modal_result(res)
-        l1_event = evaluate(l1_traj, refs, thetas_render, dt, t_max_render)
+        l1_event = evaluate_l1(l1_traj, refs, thetas_render, phi_refs, thetas_phi, dt, t_max_render)
         pos_err, pos_err_n = position_error(m.traj, l1_traj)
         id_switches, id_checked = id_switch_count(m.traj, l1_traj, res["reid_events"])
 
@@ -396,10 +510,14 @@ def main():
     out_path = SCRATCH / f"gate2_results_{SPEC.name}.json"
     with open(out_path, "w") as f:
         json.dump(rows, f, indent=2)
-    print(f"\nraw results -> {out_path}")
+    results_path = ROOT / "results" / f"gate2_instances_{SPEC.name}_{BACKEND}.json"
+    with open(results_path, "w") as f:
+        json.dump(rows, f, indent=2)
+    print(f"\nraw results -> {out_path}\ninstances table -> {results_path}")
 
     print("\n=== GATE 2 per-mutant summary ===")
-    for mtype in ["null", "vanish", "velocity_freeze", "wrong_gravity", "jitter"]:
+    for mtype in ["null", "vanish", "velocity_freeze", "wrong_gravity", "jitter", "drift",
+                  "wrong_damping", "wrong_stiffness", "frozen_deformation", "volume_leak"]:
         group = [r for r in rows if r["mtype"] == mtype]
         if not group:
             continue

@@ -59,7 +59,7 @@ from vitals.mutants import library as mut
 from vitals.adapters import REAL_MODEL_BACKENDS
 from vitals.adapters.base import ADAPTERS, concat_trajectory, prefix_of
 from vitals.adapters.video_utils import load_trajectory
-from vitals.detect.statistics import sigma_existence, sigma_kinematic, kinematic_axes_for
+from vitals.detect.statistics import sigma_existence, sigma_kinematic, sigma_interpenetration, kinematic_axes_for
 from vitals.detect.thresholds import estimate_threshold
 from vitals.detect.events import extract_event
 from vitals.stats.survival import (validity_interval, bootstrap_vi, bootstrap_vi_delta,
@@ -87,16 +87,52 @@ def build_reference(roll, spec, n, seed0):
 
 
 def calibrate(roll, spec):
-    """Same STATS/theta construction as run_l0_demo.py/run_eval.py, R2+R5
-    only -- neither swept scenario is P3-registered, so R4 never applies
-    here (see run_l0_demo.py's own K>=2-gated-on-target_property discipline
-    for why that gate matters elsewhere and would be a no-op here anyway)."""
+    """Same STATS/theta construction as run_l0_demo.py/run_eval.py, R1+R3
+    by default -- R2 (sigma_interpenetration) is added below, ONLY when
+    `spec.target_property == "P3"` (2026-09: previously never applied
+    since neither of this script's own DEFAULT_MANIFESTS is P3-registered
+    -- generalized now that occlusion_corridor_interpenetration, the one
+    P3 manifest, can also be swept via `--manifest`; a strict no-op for
+    every manifest this script was already used against, same gating
+    discipline run_l0_demo.py's own R2 wiring established, deliberately
+    NOT on K>=2 -- see that script's own comment for the real bug found
+    gating on K alone)."""
     refs = build_reference(roll, spec, spec.n_reference, seed0=1000)
     dt, t_max = refs[0].dt, float(refs[0].t[-1])
-    stats = {"R2": sigma_existence,
-             "R5": functools.partial(sigma_kinematic, axes=kinematic_axes_for(spec.name))}
+    stats = {"R1": sigma_existence,
+             "R3": functools.partial(sigma_kinematic, axes=kinematic_axes_for(spec.name))}
+    if spec.target_property == "P3":
+        assert refs[0].K >= 2, (
+            f"{spec.name!r} is registered target_property: P3 but its scene has K={refs[0].K} "
+            f"objects -- sigma_interpenetration needs obj=0/target=1 both real.")
+        stats["R2"] = sigma_interpenetration
     thetas = {k: estimate_threshold(refs, fn, alpha=ALPHA) for k, fn in stats.items()}
-    return refs, stats, thetas, dt, t_max
+    # R1's own obj=0 restriction, for scoring cached real-model (video-
+    # reconstructed) trajectories only -- those are always K=1 (Phi's
+    # single-object-only reconstruction), same restriction run_gate2.py's
+    # own STATS already applies to its own L1 candidates, for the same
+    # documented reason (sigma_existence's own docstring: unrestricted
+    # whole-count comparison against a K>1 reference ensemble fires R1
+    # 100% of the time regardless of tracking quality). DELIBERATELY NOT
+    # used for `stats` above (GATE1a/1b/Truth/baseline all stay full-scene
+    # K, matching every already-published sweep's own behavior exactly --
+    # a strict no-op for occlusion_corridor/ramp_descent_high_friction,
+    # both native K=1; only changes behavior for a K>1 scenario's
+    # real-model condition, found directly, 2026-08, collision's own K=2
+    # scene being the first K>1 scenario swept).
+    #
+    # R2 in `stats_video` too, when registered above -- unlike R1's
+    # obj=0 restriction (which only matters because real-model candidates
+    # used to be structurally K=1), a P3 manifest's real-model candidate
+    # now genuinely carries K=2 (2026-09, VideoWorldModel's own dual-
+    # object reconstruction) via the SAME `merge_secondary` mechanism GATE
+    # 2's own instrument check already validated -- so R2 must be scored
+    # here exactly like R1/R3 already are, not skipped.
+    stats_video = {"R1": functools.partial(sigma_existence, obj=0), "R3": stats["R3"]}
+    if "R2" in stats:
+        stats_video["R2"] = stats["R2"]
+    thetas_video = {k: estimate_threshold(refs, fn, alpha=ALPHA) for k, fn in stats_video.items()}
+    return refs, stats, thetas, stats_video, thetas_video, dt, t_max
 
 
 def score(stats, thetas, dt, t_max, refs, traj):
@@ -104,27 +140,46 @@ def score(stats, thetas, dt, t_max, refs, traj):
     return extract_event(sigmas, thetas, dt, t_max)
 
 
+NEAR_FLAT_SCENARIOS = ("occlusion_corridor", "collision")
+
+
 def build_demo_cases(spec, base):
     """GATE 1b cases -- identical construction to run_l0_demo.py's own
-    build_demo_cases for a non-P3 manifest (occlusion_corridor* -> duplicate,
-    everything else -> wrong_gravity; occlusion_corridor*'s own lower R5
-    threshold needs a smaller jitter sigma to fire reliably). Duplicated
-    rather than imported: run_l0_demo.py builds its SPEC/roll from env vars
-    at module import time, which would fire real (if cheap) side effects
-    just to reach this one pure function. Keep in sync by hand if either
-    changes -- both are short and reviewed together."""
+    build_demo_cases for a non-P3 manifest (NEAR_FLAT_SCENARIOS ->
+    duplicate, everything else -> wrong_gravity; NEAR_FLAT_SCENARIOS' own
+    lower R3 threshold needs a smaller jitter sigma to fire reliably,
+    except collision, which needs a LARGER one once R3 is X-only
+    restricted there -- see run_l0_demo.py's own build_demo_cases
+    docstring for the full mechanism). Duplicated rather than imported:
+    run_l0_demo.py builds its SPEC/roll from env vars at module import
+    time, which would fire real (if cheap) side effects just to reach
+    this one pure function. Keep in sync by hand if either changes --
+    both are short and reviewed together.
+
+    FIXED (2026-08, found directly running collision through this script
+    for the first time): this copy had fallen out of sync with run_l0_
+    demo.py/run_gate2.py's own already-established per-scenario tuning --
+    it still branched on a bare `occlusion_corridor` prefix check (missing
+    collision from the near-flat set entirely, so collision got
+    wrong_gravity instead of duplicate) and only had a two-way jitter
+    sigma split (0.05/0.15, missing collision's own 0.8). Both silently
+    produced GATE1b 3/5 (wrong_gravity and jitter both censored, the same
+    near-no-op failure modes already root-caused and fixed elsewhere for
+    this exact scenario) instead of the correct 5/5 -- a real bug, not a
+    genuine collision-specific GATE1b weakness."""
     t_mid = round(spec.horizon_s * 0.25, 2)
     cases = [
         ("null", mut.null(base)),
         ("vanish", mut.vanish(base, t_star=t_mid)),
         ("velocity_freeze", mut.velocity_freeze(base, t_star=t_mid)),
     ]
-    if spec.name.startswith("occlusion_corridor"):
+    if spec.name.startswith(NEAR_FLAT_SCENARIOS):
         cases.append(("duplicate", mut.duplicate(base, t_star=t_mid)))
     else:
         wg_factor = 0.4 if spec.name == "projectile" else 0.6
         cases.append(("wrong_gravity", mut.wrong_gravity(base, factor=wg_factor)))
-    jitter_sigma = 0.05 if spec.name.startswith("occlusion_corridor") else 0.15
+    jitter_sigma = 0.05 if spec.name.startswith("occlusion_corridor") else (
+        0.8 if spec.name == "collision" else 0.15)
     cases.append((f"jitter sig={jitter_sigma}", mut.jitter(base, sigma=jitter_sigma)))
     return cases
 
@@ -222,7 +277,7 @@ def real_model_population(stats, thetas_full, dt, refs, trajs):
 def run_one_level(roll, base_spec, lam_multiplier, n_gate1a, n_truth, n_baseline,
                   real_model_cache_dirs=None):
     spec = replace(base_spec, lam=base_spec.lam * lam_multiplier)
-    refs, stats, thetas, dt, t_max = calibrate(roll, spec)
+    refs, stats, thetas, stats_video, thetas_video, dt, t_max = calibrate(roll, spec)
     gate_1a, held_out = run_gate1a(roll, spec, refs, stats, thetas, dt, t_max, n_gate1a)
     gate_1b = run_gate1b(spec, refs, stats, thetas, dt, t_max, held_out[0])
 
@@ -236,7 +291,7 @@ def run_one_level(roll, base_spec, lam_multiplier, n_gate1a, n_truth, n_baseline
     for name, cache_dir in (real_model_cache_dirs or {}).items():
         trajs = load_cached_population(cache_dir)
         if trajs:
-            conditions[name] = real_model_population(stats, thetas, dt, refs, trajs)
+            conditions[name] = real_model_population(stats_video, thetas_video, dt, refs, trajs)
 
     vi50 = {name: validity_interval(ev, 0.5) for name, ev in conditions.items()}
     ci = {name: bootstrap_vi(ev, 0.5, n_boot=400) for name, ev in conditions.items()}

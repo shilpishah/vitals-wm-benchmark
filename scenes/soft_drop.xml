@@ -1,0 +1,43 @@
+<mujoco model="soft_drop">
+  <!-- Z-up, flat gray floor. AGENT.md M9 (2026-09-13): the first SOFT-BODY
+       scenario -- a deformable ellipsoid (MuJoCo flex, 8x8x8 vertices,
+       tetrahedral, edge-equality material as MuJoCo's own
+       model/flex/sphere_full.xml: CG solver, tolerance 1e-6, timestep 1ms,
+       implicitfast, 1mm vertex radius) is dropped from 1.2m with a push
+       along +x, lands, squashes and bulges, rebounds, and tumbles on.
+       Material: edge solref="0.05 1" (softened from MuJoCo's default 0.02
+       on the first GATE 1 run, 2026-09-14 -- the default body's squash
+       lasted ~3 frames at contact and left a 0.8% static deflection,
+       below any floor, so frozen_deformation was undetectable; at 0.05 the
+       impact squash is 17% of the rest extent ratio, the RESTING body
+       stays 7% deflected, first bounce reaches 0.123m, and the mesh
+       volume stays within 0.968-1.059 of rest; 0.1 collapses into a
+       pancake). Drop height 1.2m (raised from 0.8m, same run: at 0.8m the
+       impact squash cleared the shape threshold for only 8 frames, one
+       short of the 0.3s persistence window, so frozen_deformation stayed
+       censored; at 1.2m it holds for 77 frames and fires at 0.5s; 1.6m
+       gains nothing further). The body barely bounces on this material
+       (first rebound ~9mm above its resting height), so a damping error
+       has nothing to act on here -- wrong_damping is a documented no-op
+       for this scene, like wrong_gravity on the near-flat scenes.
+       Contact at ~0.45s; bit-reproducible across processes. Material parameters are
+       part of s_0 -- the reference ensemble perturbs the drop state only
+       (decision 5). The keyframe below is GENERATED (one x-velocity entry
+       per vertex slide joint); regenerate with scripts, do not hand-edit. -->
+  <option solver="CG" tolerance="1e-6" timestep="0.001" integrator="implicitfast" gravity="0 0 -9.81"/>
+  <size memory="20M"/>
+  <visual><global offwidth="1280" offheight="720"/></visual>
+  <default><geom friction="0.6 0.005 0.03" solref="0.01 1"/></default>
+  <worldbody>
+    <light diffuse="0.8 0.8 0.8" pos="1 0 4" dir="0 0 -1"/>
+    <geom name="floor" type="plane" size="6 3 0.1" pos="1.5 0 0" rgba="0.5 0.5 0.5 1"/>
+    <flexcomp name="blob" type="ellipsoid" count="8 8 8" spacing="0.05 0.05 0.05" pos="0 0 1.2" dim="3"
+              radius="0.001" rgba="0.8 0.1 0.1 1" mass="0.5">
+      <edge equality="true" solref="0.05 1"/>
+      <contact selfcollide="none" internal="false"/>
+    </flexcomp>
+  </worldbody>
+  <keyframe>
+    <key name="push" qvel="2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0 2 0 0"/>
+  </keyframe>
+</mujoco>

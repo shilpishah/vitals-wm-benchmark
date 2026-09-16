@@ -1,0 +1,90 @@
+<mujoco model="block_stack">
+  <!-- Z-up, flat ground. 2026-09-11, scenario scaling ("start with occlusion
+       re-emergence and stacking"): a two-cube tower struck by the rolling
+       ball -- the first scene here where a SUPPORTED object (box_top rests on
+       box_bottom) and a real contact-driven interaction between a sphere
+       and a box exist. Pre-registered target_property: P3 (relational
+       persistence): the ball must not pass INTO the bottom cube -- scored by
+       sigma_interpenetration (R2) between obj=0 (ball) and target=1
+       (box_bottom), the same obj/target convention occlusion_corridor_
+       interpenetration already uses. The ball's own dynamics (stops /
+       rebounds off the tower) are R3's, existence R1's.
+
+       Reconstruction constraints decided the geometry, stated plainly:
+       Phi recovers a mask centroid on a KNOWN plane (reconstruct.py), and
+       the P3 secondary object is unprojected onto the SAME plane as the
+       ball (video_model.py's default_phi_reconstruct). So box_bottom is a
+       cube of half-size 0.15 = BALL_RADIUS: its center sits at z=0.15
+       exactly like the ball's, and it must SLIDE, not tip, when struck
+       (verified by simulation over the reference ensemble: max tilt of
+       box_bottom stays a few degrees). box_top is a slender post, lighter, and
+       DOES topple off in every reference -- the visible "stacking" event a
+       video model must depict -- but it is NOT state-scored (its centroid
+       leaves any fixed plane the moment it tips; track_all_objects stays
+       false). That is a stated measurement limit of v1, not a hidden one:
+       a candidate that leaves the top cube magically balanced is caught
+       only insofar as the ball/bottom-cube dynamics differ.
+
+       Body order matters: ball, box_bottom, box_top = object indices 0, 1,
+       2 (runner.body_names order; the renderer's segmentation ids follow
+       it, which is how video_model.py picks the frame-0 masks). -->
+  <option timestep="0.002" gravity="0 0 -9.81"/>
+  <visual>
+    <global offwidth="1280" offheight="720"/>
+  </visual>
+
+  <default>
+    <geom friction="0.6 0.005 0.03" solref="0.01 1"/>
+  </default>
+
+  <worldbody>
+    <light diffuse="0.8 0.8 0.8" pos="3 0 4" dir="0 0 -1"/>
+
+    <geom name="floor" type="plane" size="9 3 0.1" pos="3 0 0" rgba="0.5 0.5 0.5 1"/>
+
+    <body name="ball" pos="0 0 0.15">
+      <freejoint/>
+      <geom name="ball_geom" type="sphere" size="0.15" mass="0.5" rgba="0.8 0.1 0.1 1"
+            condim="6"/>
+    </body>
+    <!-- Bottom cube: half-size 0.15 (center height = ball center height).
+         Mass 0.4 (lighter than the ball) so the strike gives it enough
+         velocity to shear the post off; a center-height hit plus floor
+         friction keeps it sliding, not tipping (max 3.6 deg over the
+         ensemble). -->
+    <body name="box_bottom" pos="6.5 0 0.15">
+      <freejoint/>
+      <geom name="box_bottom_geom" type="box" size="0.15 0.15 0.15" mass="0.4"
+            rgba="0.2 0.4 0.85 1"/>
+    </body>
+    <!-- Top block: a slender post (0.12 x 0.12 x 0.72 m) resting on the
+         cube's top face (center z = 0.30 + 0.36). Tuned by simulation
+         (2026-09-11): a small CUBE on top never fell -- MuJoCo takes the
+         MAX of the two geoms' friction, so it rode along with the bottom
+         cube in 30/30 references at every friction/speed tried. A post
+         topples instead of slipping once the bottom cube decelerates
+         faster than g*(half-width/half-height) = 1.6 m/s^2 (floor friction
+         stops the cube at ~5.9 m/s^2), so it tips in 30/30 references. -->
+    <body name="box_top" pos="6.5 0 0.66">
+      <freejoint/>
+      <geom name="box_top_geom" type="box" size="0.06 0.06 0.36" mass="0.2"
+            rgba="0.95 0.8 0.2 1"/>
+    </body>
+  </worldbody>
+
+  <keyframe>
+    <!-- Baseline s_0: ball launched at the tower along x; both cubes at
+         rest, stacked. Chosen by simulation over the lam=2.0 ensemble
+         (2026-09-11, ball-only perturbation): impact 1.54+-0.11s (earliest
+         1.40s, after the 1.0s prefix), post toppled (>45 deg) by t=3.0s in
+         30/30, bottom cube tilt <= 3.6 deg, ball/cube min center separation
+         0.290m (touching = 0.30, the rest is contact softness). At the
+         manifest's own M=100: impact 1.55+-0.13s (earliest 1.37s), post
+         toppled by 3.0s in 97/100 -- the 3 that stand longer are genuine
+         ensemble ambiguity, which the calibrated thresholds absorb. At
+         rest with no strike the stack is exactly stable (0.00 deg over 4s
+         across 30 seeds). -->
+    <key name="strike" qpos="0 0 0.15 1 0 0 0   6.5 0 0.15 1 0 0 0   6.5 0 0.66 1 0 0 0"
+         qvel="6.0 0 0 0 0 0   0 0 0 0 0 0   0 0 0 0 0 0"/>
+  </keyframe>
+</mujoco>

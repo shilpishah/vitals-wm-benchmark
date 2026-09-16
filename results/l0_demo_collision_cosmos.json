@@ -1,0 +1,491 @@
+{
+  "scenario": "collision",
+  "target_property": "P4",
+  "backend": "cosmos",
+  "M": 30,
+  "lam": 2.0,
+  "t_max": 3.0,
+  "thresholds_median": {
+    "R1": 0.0,
+    "R3": 3.0040726950979324
+  },
+  "gate_1a": {
+    "false_termination_rate": null,
+    "target_alpha": 0.01,
+    "passed": null
+  },
+  "gate_1b": [],
+  "n_requested": 50,
+  "failed_seeds": [
+    25,
+    26,
+    27,
+    28,
+    29,
+    30,
+    31,
+    32,
+    33,
+    34,
+    36,
+    37,
+    38
+  ],
+  "survival": {
+    "n": 37,
+    "vi50": 1.2333333333333334,
+    "vi50_ci95": [
+      1.2,
+      1.6008333333333327
+    ],
+    "censoring_rate": 0.02702702702702703,
+    "termination_profile": {
+      "R3": 1.0
+    },
+    "kaplan_meier": {
+      "t": [
+        0.0,
+        1.0,
+        1.0,
+        1.1,
+        1.1,
+        1.1666666666666667,
+        1.1666666666666667,
+        1.1666666666666667,
+        1.2,
+        1.2,
+        1.2,
+        1.2,
+        1.2,
+        1.2,
+        1.2,
+        1.2,
+        1.2,
+        1.2,
+        1.2333333333333334,
+        1.2333333333333334,
+        1.2333333333333334,
+        1.2333333333333334,
+        1.2333333333333334,
+        1.3666666666666667,
+        1.6,
+        1.6333333333333333,
+        1.6333333333333333,
+        1.6333333333333333,
+        1.7,
+        1.7,
+        1.7666666666666666,
+        1.9,
+        2.0666666666666664,
+        2.2666666666666666,
+        2.4,
+        2.466666666666667,
+        2.5666666666666664
+      ],
+      "S": [
+        1.0,
+        0.972972972972973,
+        0.9459459459459459,
+        0.9189189189189189,
+        0.8918918918918918,
+        0.8648648648648648,
+        0.8378378378378378,
+        0.8108108108108109,
+        0.7837837837837839,
+        0.7567567567567569,
+        0.7297297297297299,
+        0.702702702702703,
+        0.675675675675676,
+        0.6486486486486489,
+        0.6216216216216219,
+        0.594594594594595,
+        0.567567567567568,
+        0.5405405405405409,
+        0.5135135135135138,
+        0.4864864864864868,
+        0.45945945945945976,
+        0.43243243243243273,
+        0.4054054054054057,
+        0.3783783783783787,
+        0.35135135135135165,
+        0.3243243243243246,
+        0.29729729729729754,
+        0.27027027027027045,
+        0.24324324324324342,
+        0.21621621621621637,
+        0.1891891891891893,
+        0.16216216216216228,
+        0.13513513513513525,
+        0.10810810810810821,
+        0.08108108108108115,
+        0.05405405405405411,
+        0.027027027027027056
+      ]
+    },
+    "events": [
+      {
+        "time": 1.7,
+        "risk": "R3",
+        "censored": false
+      },
+      {
+        "time": 1.2333333333333334,
+        "risk": "R3",
+        "censored": false
+      },
+      {
+        "time": 2.0666666666666664,
+        "risk": "R3",
+        "censored": false
+      },
+      {
+        "time": 2.2666666666666666,
+        "risk": "R3",
+        "censored": false
+      },
+      {
+        "time": 1.2,
+        "risk": "R3",
+        "censored": false
+      },
+      {
+        "time": 1.2,
+        "risk": "R3",
+        "censored": false
+      },
+      {
+        "time": 1.2,
+        "risk": "R3",
+        "censored": false
+      },
+      {
+        "time": 1.0,
+        "risk": "R3",
+        "censored": false
+      },
+      {
+        "time": 1.1,
+        "risk": "R3",
+        "censored": false
+      },
+      {
+        "time": 1.1666666666666667,
+        "risk": "R3",
+        "censored": false
+      },
+      {
+        "time": 1.6333333333333333,
+        "risk": "R3",
+        "censored": false
+      },
+      {
+        "time": 2.4,
+        "risk": "R3",
+        "censored": false
+      },
+      {
+        "time": 1.3666666666666667,
+        "risk": "R3",
+        "censored": false
+      },
+      {
+        "time": 1.2,
+        "risk": "R3",
+        "censored": false
+      },
+      {
+        "time": 1.2,
+        "risk": "R3",
+        "censored": false
+      },
+      {
+        "time": 1.2333333333333334,
+        "risk": "R3",
+        "censored": false
+      },
+      {
+        "time": 1.7,
+        "risk": "R3",
+        "censored": false
+      },
+      {
+        "time": 1.2333333333333334,
+        "risk": "R3",
+        "censored": false
+      },
+      {
+        "time": 1.7666666666666666,
+        "risk": "R3",
+        "censored": false
+      },
+      {
+        "time": 1.6333333333333333,
+        "risk": "R3",
+        "censored": false
+      },
+      {
+        "time": 1.2,
+        "risk": "R3",
+        "censored": false
+      },
+      {
+        "time": 1.0,
+        "risk": "R3",
+        "censored": false
+      },
+      {
+        "time": 1.9,
+        "risk": "R3",
+        "censored": false
+      },
+      {
+        "time": 2.466666666666667,
+        "risk": "R3",
+        "censored": false
+      },
+      {
+        "time": 1.2,
+        "risk": "R3",
+        "censored": false
+      },
+      {
+        "time": 1.2333333333333334,
+        "risk": "R3",
+        "censored": false
+      },
+      {
+        "time": 1.1666666666666667,
+        "risk": "R3",
+        "censored": false
+      },
+      {
+        "time": 1.1666666666666667,
+        "risk": "R3",
+        "censored": false
+      },
+      {
+        "time": 2.5666666666666664,
+        "risk": "R3",
+        "censored": false
+      },
+      {
+        "time": 1.2,
+        "risk": "R3",
+        "censored": false
+      },
+      {
+        "time": 3.0,
+        "risk": null,
+        "censored": true
+      },
+      {
+        "time": 1.2,
+        "risk": "R3",
+        "censored": false
+      },
+      {
+        "time": 1.2,
+        "risk": "R3",
+        "censored": false
+      },
+      {
+        "time": 1.1,
+        "risk": "R3",
+        "censored": false
+      },
+      {
+        "time": 1.2333333333333334,
+        "risk": "R3",
+        "censored": false
+      },
+      {
+        "time": 1.6,
+        "risk": "R3",
+        "censored": false
+      },
+      {
+        "time": 1.6333333333333333,
+        "risk": "R3",
+        "censored": false
+      }
+    ]
+  },
+  "long_horizon": {
+    "n": 37,
+    "vi50": Infinity,
+    "vi50_ci95": [
+      NaN,
+      NaN
+    ],
+    "censoring_rate": 0.8648648648648649,
+    "theta_R3_median": 54.231220785024156,
+    "kaplan_meier": {
+      "t": [
+        0.0,
+        2.3666666666666667,
+        2.3666666666666667,
+        2.433333333333333,
+        2.533333333333333,
+        2.6
+      ],
+      "S": [
+        1.0,
+        0.972972972972973,
+        0.9459459459459459,
+        0.9189189189189189,
+        0.8918918918918918,
+        0.8648648648648648
+      ]
+    },
+    "events": [
+      {
+        "time": 3.0,
+        "censored": true
+      },
+      {
+        "time": 3.0,
+        "censored": true
+      },
+      {
+        "time": 3.0,
+        "censored": true
+      },
+      {
+        "time": 3.0,
+        "censored": true
+      },
+      {
+        "time": 3.0,
+        "censored": true
+      },
+      {
+        "time": 3.0,
+        "censored": true
+      },
+      {
+        "time": 3.0,
+        "censored": true
+      },
+      {
+        "time": 3.0,
+        "censored": true
+      },
+      {
+        "time": 3.0,
+        "censored": true
+      },
+      {
+        "time": 3.0,
+        "censored": true
+      },
+      {
+        "time": 2.433333333333333,
+        "censored": false
+      },
+      {
+        "time": 3.0,
+        "censored": true
+      },
+      {
+        "time": 2.6,
+        "censored": false
+      },
+      {
+        "time": 3.0,
+        "censored": true
+      },
+      {
+        "time": 3.0,
+        "censored": true
+      },
+      {
+        "time": 3.0,
+        "censored": true
+      },
+      {
+        "time": 3.0,
+        "censored": true
+      },
+      {
+        "time": 3.0,
+        "censored": true
+      },
+      {
+        "time": 2.533333333333333,
+        "censored": false
+      },
+      {
+        "time": 2.3666666666666667,
+        "censored": false
+      },
+      {
+        "time": 3.0,
+        "censored": true
+      },
+      {
+        "time": 3.0,
+        "censored": true
+      },
+      {
+        "time": 3.0,
+        "censored": true
+      },
+      {
+        "time": 3.0,
+        "censored": true
+      },
+      {
+        "time": 3.0,
+        "censored": true
+      },
+      {
+        "time": 3.0,
+        "censored": true
+      },
+      {
+        "time": 3.0,
+        "censored": true
+      },
+      {
+        "time": 3.0,
+        "censored": true
+      },
+      {
+        "time": 3.0,
+        "censored": true
+      },
+      {
+        "time": 3.0,
+        "censored": true
+      },
+      {
+        "time": 3.0,
+        "censored": true
+      },
+      {
+        "time": 3.0,
+        "censored": true
+      },
+      {
+        "time": 3.0,
+        "censored": true
+      },
+      {
+        "time": 3.0,
+        "censored": true
+      },
+      {
+        "time": 3.0,
+        "censored": true
+      },
+      {
+        "time": 2.3666666666666667,
+        "censored": false
+      },
+      {
+        "time": 3.0,
+        "censored": true
+      }
+    ]
+  }
+}

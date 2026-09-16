@@ -1,0 +1,29 @@
+# RENDER-DOMAIN INTERVENTION (AGENT.md M10, 2026-09-16): occlusion_reemergence
+# with only the render domain changed -- viewpoint (camera azimuth -65 / elevation -32). Physics, lam,
+# perturbation, horizon and seeds are the base manifest's, verbatim, so the
+# reference ensemble and every state-space number are shared with it.
+# Declarative EpisodeSpec -- the corpus regenerates from this alone.
+# 2026-09-11, scenario scaling ("start with occlusion re-emergence and
+# stacking"). The entity-persistence test occlusion_corridor only half-asks:
+# there, lam=6.0 is tuned so the reference ensemble itself splits (stop
+# short / stop behind / re-emerge), which makes "the ball never came back"
+# a legitimate outcome. Here the ensemble is TIGHT and every reference rolls
+# fully behind a 3.5m wall and re-emerges inside the real-model window
+# (30 prefix + 60 continuation frames = 3.0s), so:
+#   - not re-emerging          -> R1 existence (unambiguous)
+#   - re-emerging wrong/late   -> R3 kinematic
+#   - cumulative drift         -> R4 long-horizon (scored in parallel)
+# Simulated over this exact ensemble (scenes/occlusion_reemergence.xml's
+# own comment has the numbers): enters occlusion 1.18+-0.04s, exits
+# 2.33+-0.09s (latest 2.50s), 30/30 re-emerge, ~1.15s fully hidden.
+name: occlusion_reemergence_domB
+scene: scenes/occlusion_reemergence_domB.xml
+target_property: P2
+band: I
+lam: 2.0                   # tight on purpose (see above); collision/billiards' own value, where
+                           # reconstruction noise near the event was the binding constraint
+n_reference: 30            # M
+horizon_s: 4.0             # the ball is still rolling at 1.25 m/s at t=3s; 4s gives the baselines runway
+fps: 30
+seed: 0
+perturb_mode: velocity_x_only   # along-track only, occlusion_corridor's own reasoning

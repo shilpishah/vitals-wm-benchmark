@@ -11,7 +11,7 @@ from vitals.types import Event
 from vitals.stats.survival import seed_test_retest, minimum_detectable_difference
 
 
-def _events(times, risk="R5"):
+def _events(times, risk="R3"):
     return [Event(time=float(t), risk=risk, censored=False) for t in times]
 
 

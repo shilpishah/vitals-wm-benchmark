@@ -99,7 +99,7 @@ def _aspect_ratio_resize(image, pipe, max_area=480 * 832):
     return image, height, width
 
 
-@app.function(image=image, gpu=GPU_TYPE, volumes={"/cache": wan_cache}, timeout=1200)
+@app.function(image=image, gpu=GPU_TYPE, volumes={"/cache": wan_cache}, timeout=2400)
 def image2video(image, prompt: str, seed: int = 0, guidance_scale: float = 5.0,
                 num_inference_steps: int = 50):
     """Runs ONE Wan2.1 image-to-video generation, returns the generated

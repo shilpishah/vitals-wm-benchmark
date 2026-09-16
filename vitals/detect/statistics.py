@@ -6,7 +6,7 @@ position. That is why sigma_existence compares object *counts*, and
 sigma_kinematic compares a single tracked object's position against the
 ensemble's own centroid/spread rather than against any one reference by index.
 
-sigma_interpenetration (R4 / P3, 2026-08) is the L0-only (state-space)
+sigma_interpenetration (R2 / P3, 2026-08) is the L0-only (state-space)
 version -- calibrated the same way P2/P4 were before either ever had an L1
 (video/Phi) pass, not a violation of AGENT.md 6.2/10's own scoping of the
 FULL, learned-relation-head P3 (video-side contact/support inference) as a
@@ -41,7 +41,7 @@ def sigma_existence(traj, others, obj=None):
     Whole-count comparison then compares candidate_count=1 against
     reference_mean~2 at EVERY frame regardless of tracking quality --
     confirmed directly: null episodes with perfect SAM2 tracking (IoU
-    0.93-0.95, zero re-id events) still fired R2 100% of the time,
+    0.93-0.95, zero re-id events) still fired R1 100% of the time,
     immediately, at t=0). A fixed index (obj=0, the primary/first-
     declared body -- deterministic MuJoCo scene construction, the SAME
     object every single rollout of the identical scene XML, not a
@@ -103,6 +103,16 @@ def sigma_existence(traj, others, obj=None):
 SCENARIO_KINEMATIC_AXES = {
     "ramp_descent": (0, 2),
     "ramp_descent_high_friction": (0, 2),
+    # soft_drop (AGENT.md M9, 2026-09-14): velocity_x_only perturbation of
+    # a dropped body -- x carries the ensemble's real spread, z the drop /
+    # bounce (identical across references up to contact noise, so it runs
+    # on the 1cm floor: that is what makes wrong_damping detectable at
+    # all), y is never perturbed and is excluded for the same reason as
+    # collision's.
+    "soft_drop": (0, 2),
+    # soft_ramp (2026-09-14): ramp_descent's own restriction -- the incline
+    # is in the x-z plane; y carries only contact noise.
+    "soft_ramp": (0, 2),
     # collision (2026-08): the SAME mechanism as ramp_descent's own Y
     # exclusion above, on Y AND Z instead of just Y -- collision.yaml's
     # own perturb_mode=velocity_x_only perturbs ONLY initial x-velocity,
@@ -125,6 +135,21 @@ SCENARIO_KINEMATIC_AXES = {
     # to the x-axis by the SAME perturb_mode that makes their reference
     # std zero).
     "collision": (0,),
+    # occlusion_reemergence + block_stack (2026-09-12): the SAME mechanism
+    # as collision, found the same way -- both manifests perturb only
+    # along x (velocity_x_only / velocity_x_only_obj0), so the reference
+    # Y/Z spread is exactly zero by construction, and GATE 2's first run
+    # fired R3 on 9/10 null (defect-free) instances of each with mean
+    # reconstruction error only 0.033m / 0.040m. Not extended to the
+    # original occlusion_corridor (also velocity_x_only) here: its own
+    # GATE 2 history was measured without this restriction and its
+    # published populations were scored without it; changing it is a
+    # separate, deliberate recalibration, not a side effect of adding
+    # two new scenes.
+    "occlusion_reemergence": (0,),
+    "occlusion_reemergence_domA": (0,),   # M10 render-domain variants: same physics, same restriction
+    "occlusion_reemergence_domB": (0,),
+    "block_stack": (0,),
 }
 
 
@@ -218,6 +243,65 @@ def sigma_kinematic(traj, others, obj=0, axes=None):
     return sigma
 
 
+def sigma_shape(traj, others, obj=0):
+    """R7 shape -- the soft-body MATERIAL channel (AGENT.md M9): Mahalanobis
+    distance of the candidate's SHAPE descriptors (Trajectory.shape,
+    vitals.physics.softbody.SHAPE_DESCRIPTORS: silhouette area in px and
+    principal-axis ratio) from the reference band's, per instant. Same
+    form as the kinematic channel, same floor logic (per-descriptor floor
+    = 1% of the reference mean area / 0.01 in ratio), same NaN conventions.
+    NaN throughout when the candidate or references carry no shape state
+    (every rigid scenario) -- the channel simply never fires there."""
+    if traj.shape is None or any(o.shape is None for o in others):
+        return np.full(traj.T, np.nan)
+    Tc = _common_T(traj, others)
+    # SCALE-FREE descriptors only (index 1 onward: axis ratio). Size (area)
+    # belongs to R6 -- measured directly on the first GATE 1 run
+    # (2026-09-14): with area inside R7 too, volume_leak fired R7 at
+    # 1.07s instead of R6, because R7's tighter area floor crossed one
+    # frame before R6's ratio statistic and precedence never got a tie
+    # to resolve. One quantity, one channel.
+    cand = traj.shape[:Tc, obj, 1:]                               # (Tc, S-1)
+    ref = np.stack([o.shape[:Tc, obj, 1:] for o in others])       # (M, Tc, S-1)
+    centroid = np.nanmean(ref, axis=0)
+    floor = 0.005                                                  # half a percent of axis ratio
+    spread = np.maximum(np.nanstd(ref, axis=0), floor)
+    dist = np.linalg.norm((cand - centroid) / spread, axis=-1)
+    sigma = np.full(traj.T, np.nan)
+    sigma[:Tc] = dist
+    if Tc < traj.T:
+        sigma[Tc:] = sigma[Tc - 1] if Tc > 0 else np.nan
+    return sigma
+
+
+def sigma_conservation(traj, others, obj=0):
+    """R6 (AGENT.md M9): silhouette-area CONSERVATION -- the soft-body
+    analogue of interpenetration, a constraint the entity must keep to
+    stay the same entity ("objects that squash without bulging, or bulge
+    without squashing"). Statistic: the candidate's area ratio to its own
+    frame-0 area, A(t)/A(0), compared with the reference band's ratio at
+    the same instant, normalized by the band's spread with a 2% floor
+    (area is a projected quantity; ordinary squash-and-bulge moves it by
+    a few percent, which the band absorbs -- a leak or a puff does not).
+    One-sided in EFFECT only through calibration, like R2: deviation in
+    either direction counts, because losing area and gaining it are both
+    conservation failures. NaN wherever undefined (no shape state, empty
+    silhouette, or A(0) undefined)."""
+    if traj.shape is None or any(o.shape is None for o in others):
+        return np.full(traj.T, np.nan)
+    Tc = _common_T(traj, others)
+    a0 = traj.shape[0, obj, 0]
+    cand = traj.shape[:Tc, obj, 0] / a0 if np.isfinite(a0) and a0 > 0 else np.full(Tc, np.nan)
+    ref = np.stack([o.shape[:Tc, obj, 0] / o.shape[0, obj, 0] for o in others])   # (M, Tc)
+    mean = np.nanmean(ref, axis=0)
+    spread = np.maximum(np.nanstd(ref, axis=0), 0.02)
+    sigma = np.full(traj.T, np.nan)
+    sigma[:Tc] = np.abs(cand - mean) / spread
+    if Tc < traj.T:
+        sigma[Tc:] = sigma[Tc - 1] if Tc > 0 else np.nan
+    return sigma
+
+
 def sigma_interpenetration(traj, others, obj=0, target=1):
     """reference-typical separation / actual separation, between two
     tracked objects -- a RATIO, not a difference. ~1.0 when the candidate's
@@ -242,7 +326,7 @@ def sigma_interpenetration(traj, others, obj=0, target=1):
     does, a handful of OTHER references' genuinely modest deviations at
     that same bin get divided by ~1e-6 and blow the calibrated threshold
     up by 5+ orders of magnitude (confirmed directly: theta reached
-    ~15,800 against a real defect's own natural value of ~1). R2/R5 never
+    ~15,800 against a real defect's own natural value of ~1). R1/R3 never
     hit this failure mode not because they're immune to it, but because
     their own "near-zero" bins are LITERALLY always exactly zero in a
     clean reference ensemble (an object's presence count never fluctuates
@@ -254,13 +338,13 @@ def sigma_interpenetration(traj, others, obj=0, target=1):
     median-based normalizer was already built to handle.
 
     NaN, never inf, when either object is missing: an existence failure
-    (either object absent) is already R2/sigma_existence's job (AGENT.md
+    (either object absent) is already R1/sigma_existence's job (AGENT.md
     3.6 -- one necessary property per detector). Manufacturing a SECOND
-    finding (R4) out of the same missing-object evidence sigma_existence
+    finding (R2) out of the same missing-object evidence sigma_existence
     already covers would double-count one defect as two, and PRECEDENCE
-    (detect/events.py) already ranks R2 ahead of R4 so R2 wins any
+    (detect/events.py) already ranks R1 ahead of R2 so R1 wins any
     simultaneous crossing regardless -- NaN here just avoids inventing a
-    spurious R4 signal from evidence that already has an owner.
+    spurious R2 signal from evidence that already has an owner.
     """
     Tc = _common_T(traj, others)
     cand_obj, cand_tgt = traj.pos[:Tc, obj], traj.pos[:Tc, target]     # (Tc, 3) each

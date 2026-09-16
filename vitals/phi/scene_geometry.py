@@ -167,6 +167,126 @@ PROJECTILE_CAM = [dict(lookat=[2.5, 0.0, 0.5], distance=8.0, azimuth=-90, elevat
 # throughout at this framing, not just at the two endpoints.
 COLLISION_CAM = [dict(lookat=[1.75, 0.0, 0.3], distance=9.0, azimuth=-90, elevation=-30)]
 
+# billiards.xml spans a wider x-range than collision.xml (cue starts at
+# x=0, ball B rests at x=5.0, and post-impact travel pushes both target
+# balls further still) -- lookat/distance widened accordingly so all
+# three bodies stay framed through both impacts, not just COLLISION_CAM's
+# own narrower reuse.
+BILLIARDS_CAM = [dict(lookat=[4.0, 0.0, 0.3], distance=13.0, azimuth=-90, elevation=-30)]
+
+# --- occlusion_reemergence: corridor physics, 3.5m wall, wider camera -------
+# 2026-09-11. Same azimuth/elevation as the corridor camera (the occluder-
+# aware motion prior and the "near face blocks the ray" geometry were
+# validated at elevation -45), pulled back and re-centered so the ball is
+# in frame from x=0 to past x=11 (scripts/measure_occluder_visibility.py
+# with this camera: visible [-0.5, 5.05), hidden [5.05, 8.50], visible
+# (8.50, 11.0]; under the corridor camera the ball left the frame at
+# ~8.5 and the "hidden" span ran to the end of the sweep). The hidden
+# span is the MEASURED value, not the wall's XML extent [4.90, 8.40]:
+# same +0.1..0.15m oblique offset the corridor's own bounds show.
+# 2026-09-12, second camera: lookat 4.7 / distance 13 (the first choice)
+# left the ball only 36 px in area (~7 px across) at the wall and at its
+# re-emergence point ~4m from the look-at -- and GATE 2's remaining 4/10
+# null R1 alarms were exactly the corridor's documented small-object
+# re-identification failure (the search never matched the tiny re-emerged
+# ball, so the whole occlusion gap stayed "unexplained"; the physics
+# prior was NOT the cause: this scene's rolling deceleration measured
+# 1.246 +- 0.001 m/s^2, identical to the corridor constant). Candidates
+# measured with the same sweep: lookat 5.2 / distance 11 keeps x in
+# [-0.5, 10.5] in frame with the ball at 51 px (+40%); distance 10 clips
+# the start (x >= -0.22). Bounds re-measured under the chosen camera.
+OCCLUSION_REEMERGENCE_CAM = [dict(lookat=[5.2, 0.0, 0.3], distance=11.0, azimuth=-90, elevation=-45)]
+OCCLUSION_REEMERGENCE_WALL_BOUNDS = (5.04, 8.50)   # measured: ball CENTER x where the GT mask is EMPTY (fully hidden)
+# Cross-check of the radius rule below: the span where the GT mask area is
+# < 50% of its max, measured directly under this camera, is [4.88, 8.66] --
+# the widened bounds (5.04-0.15, 8.50+0.15) = (4.89, 8.65) match to 1cm.
+# The span the tracker's own visibility logic must be given is WIDER than
+# the fully-hidden span by one object radius on each side -- found
+# directly on this scene's first GATE 2 re-run (2026-09-12): 4/10 null
+# instances fired R1 at 1.13-1.20s, i.e. at occlusion ENTRY (1.18s),
+# because reidentify.py declares the object not-visible once its mask
+# drops below 50% of its max area (its center ~one radius short of the
+# fully-hidden edge), while the physics fit's `occluded_at` was checked
+# against the fully-hidden span -- so the first search attempts landed
+# in the partial-occlusion strip, were recorded as NOT known-occluded,
+# and the gap went unexplained (reconstruct._existence_mask). This is the
+# corridor's own long-documented "coarse boundary margin" false-alarm
+# class, made explicit: an object whose CENTER is within one radius of
+# the hidden span is, for visibility purposes, inside the occluder. The
+# exit-side widening only delays the un-occluded verdict by ~3 frames
+# at this speed and costs nothing (SAM2 keeps tracking regardless).
+# Deliberately NOT retro-applied to occlusion_corridor's own entry: its
+# GATE 2 history and published populations were measured without it.
+OCCLUSION_REEMERGENCE_OCCLUDER_BOUNDS = (OCCLUSION_REEMERGENCE_WALL_BOUNDS[0] - BALL_RADIUS,
+                                         OCCLUSION_REEMERGENCE_WALL_BOUNDS[1] + BALL_RADIUS)
+
+# --- render-domain intervention (AGENT.md M10, 2026-09-16) --------------------
+# Two visual-only variants of occlusion_reemergence (identical physics, XML
+# geometry and keyframe): domA changes materials and lighting under the SAME
+# camera, so its occlusion span is the base scene's; domB keeps the base
+# materials and moves the CAMERA to an oblique view, so its span was
+# re-measured under that camera with scripts/measure_occluder_visibility.py
+# (--x-lo 4.0 --x-hi 9.5 --step 0.01): hidden [5.05, 8.77], continuous (the
+# oblique view hides the ball 0.27m longer on the exit side than the base
+# view's [5.04, 8.50]); widened by one radius each side exactly as the base.
+OCCLUSION_REEMERGENCE_DOMB_CAM = [dict(lookat=[5.2, 0.0, 0.3], distance=11.0, azimuth=-65, elevation=-32)]
+OCCLUSION_REEMERGENCE_DOMB_WALL_BOUNDS = (5.05, 8.77)
+OCCLUSION_REEMERGENCE_DOMB_OCCLUDER_BOUNDS = (OCCLUSION_REEMERGENCE_DOMB_WALL_BOUNDS[0] - BALL_RADIUS,
+                                              OCCLUSION_REEMERGENCE_DOMB_WALL_BOUNDS[1] + BALL_RADIUS)
+
+# --- block_stack: ball strikes a two-block tower at x=6.5 -----------------------
+# 2026-09-11. Collision-style framing widened to hold x in [0, 7.5] plus a
+# 0.72m-tall post; verified by rendering frame 0 and t=3s (all three
+# bodies in frame, post upright at 0, toppled at 3s).
+BLOCK_STACK_CAM = [dict(lookat=[3.5, 0.0, 0.4], distance=11.5, azimuth=-90, elevation=-30)]
+
+
+# --- soft_drop: deformable ellipsoid dropped from 0.8m with a +x push ----------
+# 2026-09-14 (AGENT.md M9). Rest radius 0.175m (8x8x8 flexcomp, 0.05m
+# spacing: 7 gaps * 0.05 / 2). The centroid sits at ~0.175m on the floor;
+# plane_z unprojection uses that. Close framing: the body spans ~40px at
+# the corridor's usual distance, too few pixels for shape descriptors.
+# Verified by rendering (frame 0 airborne top-left, landing, roll to
+# x~1.3 by 4s all in frame).
+SOFT_DROP_RADIUS = 0.175
+SOFT_DROP_CAM = [dict(lookat=[0.8, 0.0, 0.4], distance=3.5, azimuth=-90, elevation=-12)]
+# The pixel path unprojects the mask centroid onto a horizontal plane at
+# the body's RESTING centroid height -- measured 0.112m over 60 references
+# (the soft body sits 6cm lower than its rest radius: 7% static deflection,
+# scenes/soft_drop.xml) -- and, exactly as ramp_descent's own
+# RAMP_SETTLING_FRAMES, declares the frames before the body has settled
+# UNRELIABLE for position (NaN, never a spurious plane point): the drop
+# from 1.2m lands at frame ~16 and every reference is within 1cm of its
+# resting height from frame 38 (1.27s) on; 40 frames for margin. Found
+# by the first GATE 2 run (2026-09-14): unprojecting an AIRBORNE body onto
+# the floor plane put it 9m away and fired R3 on every null at 0.13s --
+# the airborne-reconstruction gap (M2.7) re-found on a new scene, handled
+# the same way. Shape descriptors come straight from the mask and are
+# NOT subject to this prefix (R6/R7 can fire from the first frame).
+# Consequence, stated plainly: with a 1s conditioning prefix the scored
+# continuation of this scene is a body settling and then resting -- the
+# material channels carry the test; R3 guards drift and sliding.
+SOFT_DROP_REST_Z = 0.112
+SOFT_DROP_SETTLING_FRAMES = 40
+
+# --- soft_ramp: deformable body released on ramp_descent's incline ----------
+# 2026-09-14 (AGENT.md M9.1). Same incline/floor/camera as ramp_descent, so
+# the plane pieces are ramp_descent's own with the SOFT body's centroid
+# offset instead of the rigid ball's radius: measured over a rollout,
+# 0.151 m along the ramp normal while on the incline (std 0.005) and
+# 0.142 m above the floor at rest (young-1000 body, 3-5% squashed under
+# its own weight; the rigid ball's is 0.15 both places). Release is 0.25 m
+# above the surface, so the settling prefix is short: 15 frames.
+SOFT_RAMP_RADIUS = 0.175
+SOFT_RAMP_OFFSET_INCLINE = 0.151
+SOFT_RAMP_OFFSET_FLOOR = 0.142
+SOFT_RAMP_SETTLING_FRAMES = 15
+SOFT_RAMP_PLANE_PIECES = [
+    (tuple(_RAMP_SURFACE_POINT + SOFT_RAMP_OFFSET_INCLINE * _RAMP_NORMAL), tuple(_RAMP_NORMAL),
+     lambda p: p[0] <= RAMP_TOE_X + 0.05),
+    ((0.0, 0.0, SOFT_RAMP_OFFSET_FLOOR), (0.0, 0.0, 1.0), lambda p: True),
+]
+
 
 def _plane_z_kwargs():
     return dict(mode="plane_z", reconstruct_kwargs=dict(plane_z=BALL_RADIUS))
@@ -190,12 +310,78 @@ SCENES = {
         occluder_bounds=OCCLUSION_CORRIDOR_WALL_BOUNDS,
         deceleration=OCCLUSION_CORRIDOR_DECELERATION,
     ),
+    # Reuses scenes/occlusion_corridor_distractor.xml AS-IS (the manifest's
+    # own comment) -- same scene, same camera, same ball, same decoy, so
+    # this entry is byte-identical to occlusion_corridor_distractor's own
+    # above. What differs is entirely in run_l0_demo.py's/the real-model
+    # adapter's own handling of target_property == "P3", not scene
+    # geometry. No entry existed here before this (2026-09): this manifest
+    # had never been run through anything that calls scene_geometry.get()
+    # -- only state-space GATE 1/GATE 1b, which never needs it.
+    "occlusion_corridor_interpenetration": dict(
+        camera=_OCCLUSION_CORRIDOR_CAM, object_radius=BALL_RADIUS,
+        mode="plane_z", reconstruct_kwargs=dict(plane_z=BALL_RADIUS),
+        occluder_bounds=OCCLUSION_CORRIDOR_WALL_BOUNDS,
+        deceleration=OCCLUSION_CORRIDOR_DECELERATION,
+    ),
     "occlusion_corridor_moving": dict(
         camera=_OCCLUSION_CORRIDOR_CAM, object_radius=BALL_RADIUS,
         mode="plane_z", reconstruct_kwargs=dict(plane_z=BALL_RADIUS),
         occluder_bounds=None,   # NOT fixed -- see occluder_geometry below
         occluder_geometry=OCCLUSION_CORRIDOR_MOVING_OCCLUDER_GEOMETRY,
         deceleration=OCCLUSION_CORRIDOR_DECELERATION,
+    ),
+    # occlusion_reemergence (2026-09-11, scenario scaling): occlusion_corridor's
+    # floor/ball/physics with a 3.5m wall -- same rolling deceleration, its
+    # own wider camera (the ball travels to x~9.4 by t=3s; under the corridor
+    # camera it leaves the frame at x~8.5, measured) and its own measured
+    # occlusion span under that camera.
+    "occlusion_reemergence": dict(
+        camera=OCCLUSION_REEMERGENCE_CAM, object_radius=BALL_RADIUS,
+        mode="plane_z", reconstruct_kwargs=dict(plane_z=BALL_RADIUS),
+        occluder_bounds=OCCLUSION_REEMERGENCE_OCCLUDER_BOUNDS,   # radius-widened; see its own comment
+        deceleration=OCCLUSION_CORRIDOR_DECELERATION,
+    ),
+    # M10 render-domain variants (2026-09-16): domA = same camera, new
+    # materials/lighting; domB = same materials, oblique camera with its
+    # own measured occlusion span. Same physics, deceleration and plane.
+    "occlusion_reemergence_domA": dict(
+        camera=OCCLUSION_REEMERGENCE_CAM, object_radius=BALL_RADIUS,
+        mode="plane_z", reconstruct_kwargs=dict(plane_z=BALL_RADIUS),
+        occluder_bounds=OCCLUSION_REEMERGENCE_OCCLUDER_BOUNDS,
+        deceleration=OCCLUSION_CORRIDOR_DECELERATION,
+    ),
+    "occlusion_reemergence_domB": dict(
+        camera=OCCLUSION_REEMERGENCE_DOMB_CAM, object_radius=BALL_RADIUS,
+        mode="plane_z", reconstruct_kwargs=dict(plane_z=BALL_RADIUS),
+        occluder_bounds=OCCLUSION_REEMERGENCE_DOMB_OCCLUDER_BOUNDS,
+        deceleration=OCCLUSION_CORRIDOR_DECELERATION,
+    ),
+    # block_stack (2026-09-11, scenario scaling, P3): flat ground, plane_z
+    # for the ball AND the bottom cube (its half-size equals BALL_RADIUS so
+    # both centroids sit at z=0.15 -- the P3 secondary object is unprojected
+    # onto the same plane as the ball, video_model.py's own convention). The
+    # post on top is not state-scored (scenes/block_stack.xml's own comment).
+    "block_stack": dict(
+        camera=BLOCK_STACK_CAM, object_radius=BALL_RADIUS,
+        mode="plane_z", reconstruct_kwargs=dict(plane_z=BALL_RADIUS),
+        occluder_bounds=None,
+    ),
+    # soft_drop (2026-09-14, AGENT.md M9): the first soft-body scenario.
+    # `soft_body=True` tells the scoring scripts to attach shape descriptors
+    # (softbody.attach_shape) and to score R6 conservation / R7 shape.
+    "soft_ramp": dict(
+        camera=RAMP_CAM, object_radius=SOFT_RAMP_RADIUS,
+        mode="plane_pieces",
+        reconstruct_kwargs=dict(plane_pieces=SOFT_RAMP_PLANE_PIECES,
+                                 unreliable_prefix_frames=SOFT_RAMP_SETTLING_FRAMES, with_shape=True),
+        occluder_bounds=None, soft_body=True,
+    ),
+    "soft_drop": dict(
+        camera=SOFT_DROP_CAM, object_radius=SOFT_DROP_RADIUS,
+        mode="plane_z", reconstruct_kwargs=dict(plane_z=SOFT_DROP_REST_Z, with_shape=True,
+                                                 unreliable_prefix_frames=SOFT_DROP_SETTLING_FRAMES),
+        occluder_bounds=None, soft_body=True,
     ),
     "ramp_descent": dict(
         camera=RAMP_CAM, object_radius=BALL_RADIUS,
@@ -226,6 +412,16 @@ SCENES = {
     # floor the whole clip, no new reconstruction capability needed.
     "collision": dict(
         camera=COLLISION_CAM, object_radius=BALL_RADIUS,
+        mode="plane_z", reconstruct_kwargs=dict(plane_z=BALL_RADIUS),
+        occluder_bounds=None,
+    ),
+    # 2026-09, billiards/multi-collision scoping: same flat-ground plane_z
+    # reconstruction mode as collision -- all three balls stay on the
+    # floor the whole clip, no new reconstruction capability needed, only
+    # a wider camera (BILLIARDS_CAM) and track_all_objects: true
+    # (EpisodeSpec) to actually reconstruct all three bodies for scoring.
+    "billiards": dict(
+        camera=BILLIARDS_CAM, object_radius=BALL_RADIUS,
         mode="plane_z", reconstruct_kwargs=dict(plane_z=BALL_RADIUS),
         occluder_bounds=None,
     ),

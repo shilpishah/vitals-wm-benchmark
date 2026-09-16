@@ -99,6 +99,14 @@ done
 python3 scripts/render_survival_report.py   # -> results/gate1_survival.html
 ```
 
+## Evaluating your own model
+
+VITALS is meant to be pointed at models it didn't ship with. See
+**`ADDING_A_MODEL.md`** for the full checklist -- the adapter boundary
+(one `generate_fn(prefix_frames, n_frames) -> frames` closure), what to
+register where, and the real pitfalls already found integrating the two
+reference models (Cosmos-Predict2, Wan2.1).
+
 ## Five design decisions
 
 1. **Trajectory is the primary artifact, not video.** Everything upstream of
@@ -111,6 +119,7 @@ python3 scripts/render_survival_report.py   # -> results/gate1_survival.html
 
 3. **Same detectors run on state (L0) and on video (L1).** The delta between
    them IS the instrument error floor. You get it for free.
+
 
 4. **One adapter interface.** Mutants, baselines and real video models all
    implement `WorldModel`, so the eval loop never branches on model type.
@@ -146,6 +155,7 @@ metric is wrong, not the baseline.
 
 `velocity_freeze` injected at t=2.0s did not fire, and this is correct: by
 then the ball has settled into steady horizontal motion, so freezing velocity
+
 is a no-op. Injected during the fall it fires every time. A defect is only
 detectable when the true dynamics are actually changing at the injection
 point -- which is the minimum-detectable-defect concept, and it means mutant
@@ -153,7 +163,7 @@ injection times must be sampled where the dynamics are live.
 
 ## Scope for the first six weeks
 
-In: entity persistence (R2), dynamics (R5), calibration. 15 scenarios,
+In: entity persistence (R1), dynamics (R3), calibration. 15 scenarios,
 M=20, 3 lambda levels, 15s horizon, 3-4 open-weight models.
 
 Out: relational/support detection and its learned relation head, frame

@@ -16,7 +16,7 @@ band: I
 # friction makes the reference ensemble's OWN exact deceleration/settling
 # behavior more sensitive to lam=1.0's perturbation than the base scene's
 # (small differences in slip/contact timing compound differently under
-# much higher friction), inflating R5's threshold enough to swallow the
+# much higher friction), inflating R3's threshold enough to swallow the
 # mutant. 0.25 chosen over the more extreme 0.1 -- less aggressive
 # tightening of the reference ensemble, still fires cleanly.
 lam: 0.25

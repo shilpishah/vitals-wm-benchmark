@@ -6,8 +6,8 @@
   "lam": 0.25,
   "t_max": 5.966666666666667,
   "thresholds_median": {
-    "R2": 0.0,
-    "R5": 3.4379505516292306
+    "R1": 0.0,
+    "R3": 3.4379505516292306
   },
   "gate_1a": {
     "false_termination_rate": 0.0,
@@ -25,33 +25,33 @@
     },
     {
       "label": "vanish",
-      "risk_expected": "R2",
+      "risk_expected": "R1",
       "t_star": 1.5,
-      "risk_fired": "R2",
+      "risk_fired": "R1",
       "t_detected": 1.5,
       "censored": false
     },
     {
       "label": "velocity_freeze",
-      "risk_expected": "R5",
+      "risk_expected": "R3",
       "t_star": 1.5,
-      "risk_fired": "R5",
+      "risk_fired": "R3",
       "t_detected": 4.9,
       "censored": false
     },
     {
       "label": "wrong_gravity",
-      "risk_expected": "R5",
+      "risk_expected": "R3",
       "t_star": 0.0,
-      "risk_fired": "R5",
+      "risk_fired": "R3",
       "t_detected": 0.16666666666666666,
       "censored": false
     },
     {
       "label": "jitter sig=0.15",
-      "risk_expected": "R5",
+      "risk_expected": "R3",
       "t_star": 0.0,
-      "risk_fired": "R5",
+      "risk_fired": "R3",
       "t_detected": 0.23333333333333334,
       "censored": false
     }
@@ -65,8 +65,8 @@
     ],
     "censoring_rate": 0.625,
     "termination_profile": {
-      "R2": 0.7333333333333333,
-      "R5": 0.26666666666666666
+      "R1": 0.7333333333333333,
+      "R3": 0.26666666666666666
     },
     "kaplan_meier": {
       "t": [
@@ -149,7 +149,7 @@
       },
       {
         "time": 3.7666666666666666,
-        "risk": "R2",
+        "risk": "R1",
         "censored": false
       },
       {
@@ -164,12 +164,12 @@
       },
       {
         "time": 1.8,
-        "risk": "R2",
+        "risk": "R1",
         "censored": false
       },
       {
         "time": 2.3666666666666667,
-        "risk": "R2",
+        "risk": "R1",
         "censored": false
       },
       {
@@ -194,7 +194,7 @@
       },
       {
         "time": 3.0,
-        "risk": "R5",
+        "risk": "R3",
         "censored": false
       },
       {
@@ -204,7 +204,7 @@
       },
       {
         "time": 3.9,
-        "risk": "R2",
+        "risk": "R1",
         "censored": false
       },
       {
@@ -214,7 +214,7 @@
       },
       {
         "time": 1.7,
-        "risk": "R2",
+        "risk": "R1",
         "censored": false
       },
       {
@@ -224,12 +224,12 @@
       },
       {
         "time": 3.5666666666666664,
-        "risk": "R5",
+        "risk": "R3",
         "censored": false
       },
       {
         "time": 0.9,
-        "risk": "R2",
+        "risk": "R1",
         "censored": false
       },
       {
@@ -239,7 +239,7 @@
       },
       {
         "time": 3.8,
-        "risk": "R2",
+        "risk": "R1",
         "censored": false
       },
       {
@@ -264,7 +264,7 @@
       },
       {
         "time": 2.8666666666666667,
-        "risk": "R2",
+        "risk": "R1",
         "censored": false
       },
       {
@@ -274,7 +274,7 @@
       },
       {
         "time": 1.3666666666666667,
-        "risk": "R2",
+        "risk": "R1",
         "censored": false
       },
       {
@@ -294,17 +294,17 @@
       },
       {
         "time": 2.5666666666666664,
-        "risk": "R5",
+        "risk": "R3",
         "censored": false
       },
       {
         "time": 1.6666666666666667,
-        "risk": "R2",
+        "risk": "R1",
         "censored": false
       },
       {
         "time": 1.2,
-        "risk": "R2",
+        "risk": "R1",
         "censored": false
       },
       {
@@ -314,7 +314,7 @@
       },
       {
         "time": 3.3333333333333335,
-        "risk": "R5",
+        "risk": "R3",
         "censored": false
       },
       {
@@ -324,7 +324,7 @@
       },
       {
         "time": 2.5666666666666664,
-        "risk": "R5",
+        "risk": "R3",
         "censored": false
       },
       {
@@ -334,7 +334,7 @@
       },
       {
         "time": 2.6666666666666665,
-        "risk": "R5",
+        "risk": "R3",
         "censored": false
       },
       {
@@ -344,7 +344,7 @@
       },
       {
         "time": 3.8333333333333335,
-        "risk": "R5",
+        "risk": "R3",
         "censored": false
       },
       {
@@ -359,7 +359,7 @@
       },
       {
         "time": 1.6666666666666667,
-        "risk": "R2",
+        "risk": "R1",
         "censored": false
       },
       {
@@ -369,12 +369,12 @@
       },
       {
         "time": 2.7,
-        "risk": "R2",
+        "risk": "R1",
         "censored": false
       },
       {
         "time": 3.3666666666666667,
-        "risk": "R2",
+        "risk": "R1",
         "censored": false
       },
       {
@@ -394,7 +394,7 @@
       },
       {
         "time": 2.6,
-        "risk": "R2",
+        "risk": "R1",
         "censored": false
       },
       {
@@ -409,7 +409,7 @@
       },
       {
         "time": 2.6,
-        "risk": "R2",
+        "risk": "R1",
         "censored": false
       },
       {
@@ -434,7 +434,7 @@
       },
       {
         "time": 3.5666666666666664,
-        "risk": "R2",
+        "risk": "R1",
         "censored": false
       },
       {
@@ -449,7 +449,7 @@
       },
       {
         "time": 3.6666666666666665,
-        "risk": "R5",
+        "risk": "R3",
         "censored": false
       },
       {
@@ -469,7 +469,7 @@
       },
       {
         "time": 1.7666666666666666,
-        "risk": "R2",
+        "risk": "R1",
         "censored": false
       },
       {
@@ -494,12 +494,12 @@
       },
       {
         "time": 3.7666666666666666,
-        "risk": "R2",
+        "risk": "R1",
         "censored": false
       },
       {
         "time": 3.933333333333333,
-        "risk": "R2",
+        "risk": "R1",
         "censored": false
       },
       {
@@ -514,7 +514,7 @@
       },
       {
         "time": 3.533333333333333,
-        "risk": "R2",
+        "risk": "R1",
         "censored": false
       },
       {
@@ -529,7 +529,7 @@
       },
       {
         "time": 2.2,
-        "risk": "R2",
+        "risk": "R1",
         "censored": false
       },
       {

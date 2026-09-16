@@ -74,10 +74,7 @@ M reference rollouts from perturbed initial conditions (same s_0, scale lambda)
   -> (time, which detector fired) per rollout
   -> Kaplan-Meier survival curve; median = validity interval
   -> Aalen-Johansen cause-specific incidence = termination profile
-```
-
-Everything else in this repository is elaboration on those five lines.
-
+``` 
 ### What this system does NOT claim
 
 VITALS establishes P1–P6 as **necessary** conditions. The only valid inference
@@ -178,12 +175,38 @@ artifacts to video to simulate a defect.
 ### 3.6 The precedence rule is derived — do not reorder
 
 ```
-R1 (frame) > R2 (existence) > R3 (identity) > R4 (constraint) > R5 (kinematic)
+R5 (frame) > R1 (existence) > R2 (interpenetration / constraint) > R3 (kinematic)
+R4 (long-horizon) is scored in parallel, outside this race -- see §11
 ```
 
 Follows from the dependency ordering in §1. A violation at a lower level makes
 measurement at a higher level ill-defined: if the frame is broken, "the object
 moved" has no referent.
+
+**Channel numbering, renumbered 2026-09-11 (requested directly: "the Rs
+are not in order, they should be").** The channels are now numbered in
+the order the four FUNDAMENTAL state-space diagnoses are checked --
+**R1 existence, R2 interpenetration, R3 kinematic, R4 long-horizon
+(cumulative consistency)** -- and the pixel-scoped, deprioritized frame-
+invariance check (P1-lite) is **R5**, outside that sequence. Old -> new:
+R2->R1, R4->R2, R5->R3, R3->R4, R1->R5. The old numbering was an accident
+of history (R3 was repurposed from "identity" to long-horizon; R1 was
+built, then deprioritized as output-modality-scoped), which left the
+fundamental four reading 2/4/5/3. Every reference in this document, the
+code, the tests, and every `results/**/*.json` (keys and `risk` values)
+was rewritten by `scripts/migrate_risk_names_2026_09.py` as a
+SIMULTANEOUS mapping, with JSON originals kept in `results/archive/
+pre_rename_2026-09-11/` and a marker (`results/.risk_names_v2`) so it
+cannot run twice. Historical narrative below therefore reads with the
+NEW names throughout (e.g. an August finding "R2 fired where R5 was
+correct" now reads "R1 fired where R3 was correct") -- same events,
+renamed labels. The one place the mechanical rename could not be right
+on its own is the precedence line above, which originally listed the
+never-built "identity" channel; it is rewritten by hand here. `R^2` in
+the regression-fit text is unrelated and untouched. (This document was
+reconstructed once, 2026-09-11 evening, after an IDE buffer saved a
+pre-renumbering copy over it: the same rewrite function was re-applied
+to that copy and every later edit re-inserted verbatim.)
 
 ### 3.7 The conditioning prefix comes from a held-out realization
 
@@ -266,7 +289,7 @@ vitals/
     statistics.py       sigma_existence, sigma_kinematic,
                         sigma_interpenetration                      2 DONE, 1 OUT OF SCOPE (P3)
     thresholds.py       whole-path calibrated, per time bin         DONE (see note below)
-    events.py           first crossing + precedence (R2, R5 live)   DONE
+    events.py           first crossing + precedence (R1, R3 live)   DONE
     physical_constants.py  fit implied physical constant from
                         tracked motion, z-score vs reference band     DONE for occlusion_corridor
                                                                         deceleration (see note below);
@@ -274,7 +297,11 @@ vitals/
                                                                         (two entangled unknowns)
   stats/
     scoring.py          fair CRPS, energy score, spread-skill,
-                        rank histogram                              MISSING — needed for P6 (M7)
+                        rank histogram, fair energy DISTANCE
+                        (model ensemble vs. reference ensemble),
+                        per-episode/per-frame wrappers              DONE 2026-09-11 (tests vs. closed
+                                                                      forms); NOT yet consumed -- no
+                                                                      population asks for n_samples > 1
     survival.py         KM, Aalen-Johansen, VI, bootstrap CI        DONE
   adapters/base.py      WorldModel protocol, CopyLastState,
                         ConstantVelocity                            DONE (baselines only --
@@ -349,8 +376,8 @@ absolute depth accuracy hasn't been validated against known distances.
 Do this before depth feeds any real measurement (M4's monocular-depth-based
 3D position estimate).
 
-Two scenes, deliberately never combined (3.6): `ramp_descent` tests P4/R5
-(incline kinematics) in isolation; `occlusion_corridor` tests P2/R2 (entity
+Two scenes, deliberately never combined (3.6): `ramp_descent` tests P4/R3
+(incline kinematics) in isolation; `occlusion_corridor` tests P2/R1 (entity
 persistence) in isolation, with a flat corridor and a wall that has real
 length along the direction of travel — long enough that a rolling ball can
 stop short of it, stop hidden behind it, or roll far enough to re-emerge on
@@ -717,7 +744,7 @@ measures.
     so perturbing z-position/z-velocity at the lambda needed for useful
     along-track spread (lambda=6) doesn't cancel out on average -- it
     produces an actual bounce (z-spread measured up to ~2.8, vs a resting
-    ~0.15±0.01), which corrupts R5 detection with motion the scenario never
+    ~0.15±0.01), which corrupts R3 detection with motion the scenario never
     meant to test. **FIXED** by adding `EpisodeSpec.perturb_mode` and
     `physics/perturb.py::sample_velocity_perturbation`, which perturbs
     position and velocity along one axis only. `ramp_descent` is unaffected
@@ -799,18 +826,18 @@ measures.
     `theta` finite and non-NaN through the pre-occlusion window
     (~frame 37), `inf` (not NaN) beyond it; LOO false-positive rate 1/30
     (order-of-magnitude consistent with alpha=0.01 at this small M).
-    **Not covered by this fix, and not in its scope**: full R5-sensitivity
+    **Not covered by this fix, and not in its scope**: full R3-sensitivity
     re-validation via Phi specifically on `occlusion_corridor` -- that
     scenario's target property is P2 (existence), not P4, and its own demo
     mutant is `duplicate`, not a kinematic one (`visualize_reference_
-    ensemble.py`'s own `DEMO_MUTANT` mapping already reflects this); R5's
+    ensemble.py`'s own `DEMO_MUTANT` mapping already reflects this); R3's
     real calibration home is `ramp_descent`, which `reconstruct.py`
     explicitly does not support yet (non-planar motion, see its own
     module docstring). A same-instrument `duplicate`-mutant sensitivity
     check through Phi was attempted and blocked by a separate, already-
     documented limitation: `reconstruct.py` is single-object (K=1) only,
     same limitation `reidentify.py`'s threshold docstring already names.
-    R2/existence sensitivity via Phi is already evidenced by the
+    R1/existence sensitivity via Phi is already evidenced by the
     re-identification validation earlier in this project (10/10 correct
     reacquisition against real SAM2 candidates on the exact hard cases
     DINO failed), not re-derived here.
@@ -1098,9 +1125,9 @@ tracker, unbuilt) and FULL P3 (a learned contact/support relation head,
 video-side) as open research, not implementation, with a sanctioned
 "report as an unmeasured gap" fallback. Scoped v1, chosen directly over
 attempting either in full: an L0-only (state-space) `sigma_interpenetration`
-(R4), calibrated with the exact same rigor P2/P4 already had at L0 before
+(R2), calibrated with the exact same rigor P2/P4 already had at L0 before
 either ever got an L1 pass — activating `mutants/library.py::teleport`,
-which has declared `risk_expected="R4"` since it was first written but had
+which has declared `risk_expected="R2"` since it was first written but had
 no statistic to score against (defect #2 below, now resolved).
 
 **Key finding that shaped the whole approach:** `teleport(traj, t_star,
@@ -1130,8 +1157,8 @@ untouched).
    floors to the shared `1e-6` "no signal" fallback unpredictably often,
    and whenever it does, some OTHER reference's own modest, real deviation
    at that same bin gets divided by ~1e-6 and blows the whole-path
-   calibrated threshold up by 5 orders of magnitude. R2/R5 never hit this
-   despite `_bin_scale`'s own comment acknowledging "R2 is exactly 0
+   calibrated threshold up by 5 orders of magnitude. R1/R3 never hit this
+   despite `_bin_scale`'s own comment acknowledging "R1 is exactly 0
    almost everywhere" — because their OWN near-zero bins are LITERALLY
    always exactly zero in a clean reference ensemble (object presence
    count doesn't fluctuate by chance; a 3-axis Mahalanobis NORM is
@@ -1139,7 +1166,7 @@ untouched).
    land on unpredictably. This is a real, novel finding about the shared
    calibration machinery's implicit assumptions, not a bug in
    `thresholds.py` itself — deliberately NOT touched, to avoid any risk to
-   R2/R5's own already-verified calibration.
+   R1/R3's own already-verified calibration.
 2. Fixed by reframing as a RATIO, not a difference: `ref_mean(t) /
    max(cand_dist(t), 0.01)`. ~1.0 when normal (a stable, non-degenerate
    median — exactly the well-behaved scale `_bin_scale` was already built
@@ -1151,18 +1178,18 @@ untouched).
 3. `STATS` gating (`scripts/run_l0_demo.py`) is on `target_property ==
    "P3"`, NOT on `K >= 2` — a real bug, found by this change's own
    verification pass (every existing manifest re-run before/after): K≥2
-   gating silently added R4 to `occlusion_corridor_distractor.yaml` too
+   gating silently added R2 to `occlusion_corridor_distractor.yaml` too
    (same K=2 scene, but pre-registered P2), which changed ITS GATE 1b
-   outcome (`velocity_freeze` fired R4 instead of R5, since freezing the
+   outcome (`velocity_freeze` fired R2 instead of R3, since freezing the
    ball's own velocity incidentally changes its distance to the untouched
-   decoy, and `PRECEDENCE` ranks R4 ahead of R5) and pushed its GATE 1a
+   decoy, and `PRECEDENCE` ranks R2 ahead of R3) and pushed its GATE 1a
    false-termination rate from 0.05 to 0.067. The SAME cross-talk, same
    root cause, was independently found a second time in `build_demo_cases`
    and the 80-episode survival-population mix (both inherited the generic
-   R2/R5 mutant set for the new P3 manifest at first) — fixed the same
+   R1/R3 mutant set for the new P3 manifest at first) — fixed the same
    way: a P3 manifest gets its OWN case list (`null` + `teleport` only)
    and its OWN 2-way population mix (50/50 `null`/`teleport`), not the
-   4-way R2/R5 set. All three fixes are the identical instance of 3.6/
+   4-way R1/R3 set. All three fixes are the identical instance of 3.6/
    3.12 applied consistently, not three unrelated bugs.
 4. `n_reference: 100` for this manifest only (every other manifest keeps
    30) — GATE 1a's false-termination rate is a union across every active
@@ -1175,8 +1202,8 @@ untouched).
 
 Final state, `occlusion_corridor_interpenetration`: GATE 1a fp=0.000,
 GATE 1b clean (`null` and `teleport` both OK), n=80 survival population
-100% R4 terminations (by construction — the manifest's own 50/50 null/
-teleport mix, not yet a mixed R2/R4/R5 population; broadening that mix is
+100% R2 terminations (by construction — the manifest's own 50/50 null/
+teleport mix, not yet a mixed R1/R2/R3 population; broadening that mix is
 a natural follow-up, not done here).
 
 **Known, scoped gap, stated plainly (2026-08): P3-lite's video (L1) path
@@ -1226,7 +1253,7 @@ used for `projectile`/M4.5): higher friction makes the reference
 ensemble's own exact deceleration/settling behavior MORE sensitive to
 `lam=1.0`'s perturbation than the base scene's (small differences in slip/
 contact timing compound differently under much higher friction),
-inflating R5's threshold enough to swallow the mutant. `lam: 0.25` (chosen
+inflating R3's threshold enough to swallow the mutant. `lam: 0.25` (chosen
 over a more aggressive 0.1 that also worked — less tightening of the
 reference ensemble for the same result) fires cleanly. Final state: GATE
 1a fp=0.000, GATE 1b all OK; the n=80 survival population's own VI₅₀ comes
@@ -1239,8 +1266,8 @@ non-finite-draw handling), not a bug.
 (hand-built K=2 fixtures — the synthetic backend is K=1-only, so no
 existing helper covered this) and three tests: planted overlap crosses
 far above the ratio's own ~1.0 typical value, NaN when either object is
-absent (an existence failure is R2's job, never manufactured into a second
-R4 finding), and the one-sidedness (farther-than-typical separation stays
+absent (an existence failure is R1's job, never manufactured into a second
+R2 finding), and the one-sidedness (farther-than-typical separation stays
 well below 1.0, never registers). `python3 -m pytest tests/ -q` — 64
 passed (61 before this + 3 new), including every pre-existing manifest
 re-verified byte-identical (GATE 1a/1b unchanged) before and after every
@@ -1318,10 +1345,10 @@ PRE_DECELERATION_FIX.json` for a direct before/after comparison.
 event times before/after (both episodes fail too early, t≈1.0-1.6s, for
 the prior to matter). Cosmos (n=80) — VI₅₀ unchanged (1.40s, same 95% CI
 [1.33, 1.43]), median unchanged; ONE of 80 episodes shifted from firing
-R2 (a likely re-identification hiccup during the occlusion gap, now
-resolved with the correct prior) to firing R5/staying uncensored,
-changing the termination profile from `{R2:0.0125, R5:0.9875}` to
-`{R5:1.0}`. **The published Cosmos finding itself (worse than both
+R1 (a likely re-identification hiccup during the occlusion gap, now
+resolved with the correct prior) to firing R3/staying uncensored,
+changing the termination profile from `{R1:0.0125, R3:0.9875}` to
+`{R3:1.0}`. **The published Cosmos finding itself (worse than both
 baselines, near-immediate failure) is confirmed robust to this fix, not
 invalidated by it** — the missing prior mattered for GATE 2's own
 mutant-specific check and one borderline episode's risk classification,
@@ -1357,7 +1384,7 @@ round-trip, no SAM2 in the loop at all.**
   violate in the first place).
 - This transient is long enough (comparable to `extract_event`'s own
   `pi=0.3s` sustained-crossing requirement) to spuriously fire GATE 2's
-  own R5 detector on EVERY episode regardless of whether a real defect
+  own R3 detector on EVERY episode regardless of whether a real defect
   exists -- confirmed directly: `null` (no defect at all) fired 10/10 at
   L1, always at t=0.00, when it should never fire at all (L0: 0/10,
   correct). This is why GATE 2's own first pass on `ramp_descent_high_
@@ -1558,7 +1585,7 @@ with a broken one.
 **Scaled to statistical power immediately after (2026-08): Cosmos n=80,
 Wan n=5 (first-ever Wan population on this scenario).** Cosmos: VI₅₀=1.0s,
 95% CI **[1.0, 1.0]** (zero-width -- genuinely zero variance, not a
-rounding artifact), censoring=0%, 100% R5, 80/80 episodes firing at the
+rounding artifact), censoring=0%, 100% R3, 80/80 episodes firing at the
 identical earliest-possible instant. As strong and unambiguous a real-
 model finding as this project has produced -- Cosmos's own generated
 continuation on this scenario is deterministically wrong from its very
@@ -1583,7 +1610,7 @@ missed in M2.7's own audit of `run_l0_demo.py`/`run_gate2.py`/`run_model_
 population.py` -- would have silently scored baselines against a
 DIFFERENT theta (all 3 axes) than Cosmos/Wan's own results (X/Z only),
 an apples-to-oranges comparison in the score report. Fixed identically
-(rebind `STATS["R5"]` via `kinematic_axes_for(spec.name)` once the
+(rebind `STATS["R3"]` via `kinematic_axes_for(spec.name)` once the
 manifest is known, inside `main()`, matching the other three scripts'
 own construction exactly). `ConstantVelocity`/`CopyLastState` now both
 run on `ramp_descent_high_friction` (n=40 each, real MuJoCo backend):
@@ -1699,19 +1726,19 @@ still fully hides the ball). Full local test suite re-run clean (66
 passed) as a regression check.
 
 **Re-run on the decal scene, real numbers, not assumed (2026-08):** Cosmos
-n=80 -- VI_50=1.40s, 95% CI [1.40, 1.40], termination profile R5:100%,
+n=80 -- VI_50=1.40s, 95% CI [1.40, 1.40], termination profile R3:100%,
 censoring=0.00. **Byte-identical to the pre-decal n=80 result** (same
 VI_50, same CI, same termination profile). Honest finding, not spun as a
 win: the wall's visual styling made ZERO measurable difference to Cosmos
-on this scenario. Combined with the termination profile being 100% R5
-(kinematic) and 0% R2 (existence) both before and after, this is further
+on this scenario. Combined with the termination profile being 100% R3
+(kinematic) and 0% R1 (existence) both before and after, this is further
 evidence Cosmos was never "reading the wall as solid and stopping" in the
 first place -- it's producing kinematically-wrong motion almost
 immediately regardless of what the wall looks like, a different failure
 mode than the one the decal was built to address. Wan re-run at n=5 (up
 from n=2): VI_50=1.47s, 95% CI [1.03, 2.40], termination profile
-R2:20%/R5:80% -- termination profile now shows some R2 (existence)
-alongside R5, unlike Cosmos, but n=5 is too small to treat this as a real
+R1:20%/R3:80% -- termination profile now shows some R1 (existence)
+alongside R3, unlike Cosmos, but n=5 is too small to treat this as a real
 model-vs-model difference rather than sampling noise. The SAM2-candidate-
 disambiguation risk flagged above was NOT specifically instrumented for in
 this re-run (no per-episode mask-count diagnostic added) -- still open,
@@ -1847,17 +1874,17 @@ Raw per-instance results: `gate2_results.json` (scratchpad, not committed —
 regenerate via `scripts/run_gate2.py`).
 
 **vanish and jitter are the clean, publishable instrument-tax numbers.**
-vanish's R2 detection is accurate to -0.079s ± 0.165s through the real
+vanish's R1 detection is accurate to -0.079s ± 0.165s through the real
 pipeline — a small, tight, genuinely informative error floor. jitter fires
 at t=0 identically on both sides (its own severity is large enough to be
 instantaneous either way), so its event-time bias is a true (if trivial)
 zero; its real signal is elsewhere -- see the ID-switch note below.
 
 **velocity_freeze surfaced a qualitative failure mode, not just a timing
-bias**: 3 of 8 instances fired R2 (existence) through Phi where the correct
-answer was R5 (kinematic) — the drift from frozen velocity apparently moved
+bias**: 3 of 8 instances fired R1 (existence) through Phi where the correct
+answer was R3 (kinematic) — the drift from frozen velocity apparently moved
 the ball somewhere tracking couldn't follow (off its predictable path, or
-off-camera), and precedence (3.6: R2 outranks R5) reports the resulting
+off-camera), and precedence (3.6: R1 outranks R3) reports the resulting
 tracking failure instead of the kinematic violation it was supposed to
 measure. ID-switches=0/5 rules out wrong-object identification as the
 cause. This means for THIS mutant, on THIS scenario, Phi doesn't just add
@@ -1893,7 +1920,7 @@ writeup's caveat that the 90% rate was likely inflated by a too-short
 window -- extending the window changes nothing, because (see below) the
 balls that end up falsely flagged have already settled into their final
 resting position within the first ~2-3s, well inside even the shorter
-window. **The true, window-length-independent R2 false-positive rate for
+window. **The true, window-length-independent R1 false-positive rate for
 this scenario at lam=6.0 through Phi is ~90%**, not GATE 1's state-space
 ~1%. Full-horizon results: `gate2_null_full_rerun.json`.
 
@@ -1942,7 +1969,7 @@ world-x-interval approximation the physics-prior's occluder check uses:
   population resting exactly in the margin where that approximation is
   weakest.
 
-*Follow-up 3 -- root-cause velocity_freeze's R2-preemption (3/8
+*Follow-up 3 -- root-cause velocity_freeze's R1-preemption (3/8
 instances).* Confirmed directly by re-simulating what the physics prior's
 OWN decelerating model (calibrated deceleration a=1.246 m/s^2, unaware any
 mutant exists) would have predicted from each instance's (x0, v0) at the
@@ -1954,8 +1981,8 @@ cross back into view (confirmed against ground truth: true re-emergence
 times of 2.5-5.6s). When physics believes an object has permanently
 stopped, `known_occluded` never releases, search stays suppressed for the
 rest of the clip exactly like the null mechanism above, and the resulting
-unresolved-existence signal preempts the kinematic (R5) detection this
-mutant was designed to trigger. The 5 instances that DID fire R5 correctly
+unresolved-existence signal preempts the kinematic (R3) detection this
+mutant was designed to trigger. The 5 instances that DID fire R3 correctly
 show high search churn instead (135-181 events) -- meaning their gap
 structure broke `known_occluded`'s permanent lock at some point (likely the
 same coarse-boundary margin effect as follow-up 2, not traced further per
@@ -1991,7 +2018,7 @@ not only specificity).
 **Result: this fixed specificity perfectly and destroyed sensitivity
 almost completely -- not a fix, a different failure mode.** null's
 false-positive rate went 9/10 -> 0/10 (correct_risk 1/10 -> 10/10) exactly
-as hoped. But `vanish` -- a mutant that unambiguously SHOULD fire R2 every
+as hoped. But `vanish` -- a mutant that unambiguously SHOULD fire R1 every
 time, a genuine, permanent disappearance -- went from correctly firing
 8/8 to firing **0/8**. `velocity_freeze` went 8/8 -> 0/8 fired too. Only
 `jitter` was unaffected (its own signal is large enough to be
@@ -2010,7 +2037,7 @@ never resolves existence (the identical mechanism behind the original
 90% false-positive finding), that cutoff almost certainly triggers early
 -- making theta effectively infinite for most of the clip, which means
 NOTHING can ever cross it there, genuine violation or not. The fix didn't
-make R2 detection more accurate through Phi; it made the risk category
+make R1 detection more accurate through Phi; it made the risk category
 nearly inert.
 
 **Open, unresolved as of this entry -- genuinely a design fork, not a
@@ -2125,10 +2152,10 @@ fix changes what existence MEANS for Phi, not a threshold):**
 |---|---|---|---|
 | null | 9/10 → 6/10 | 1/10 → 4/10 | 3 fully-explained instances (`null_0/7/9`, all `n_reid=0`) now correctly censored |
 | vanish | 8/8 → 6/8 | 8/8 → 6/8 | the 2 lost (`vanish_3/5`) are the predicted philosophically-ambiguous case -- coincidental occlusion-timing overlap, not a regression; remaining 6 kept a tight bias (-0.083s ± 0.186s, same quality as before) |
-| velocity_freeze | 8/8 → 6/8 | 5/8 → 5/8 (unchanged count, real qualitative win) | `velocity_freeze_2/6` -- the ORIGINAL R2-misattribution cases (§7 M5's own finding) -- now correctly abstain (censored) instead of confidently reporting the WRONG risk category. A silent miss is a materially less harmful failure than a wrong, confident answer, even though it doesn't move the raw "correct" count |
+| velocity_freeze | 8/8 → 6/8 | 5/8 → 5/8 (unchanged count, real qualitative win) | `velocity_freeze_2/6` -- the ORIGINAL R1-misattribution cases (§7 M5's own finding) -- now correctly abstain (censored) instead of confidently reporting the WRONG risk category. A silent miss is a materially less harmful failure than a wrong, confident answer, even though it doesn't move the raw "correct" count |
 | jitter | 8/8 → 8/8 | 8/8 → 8/8 | completely unaffected, as expected (fires at t=0, before any of this machinery is relevant) |
 
-**This is the first attempt at the R2/existence problem that produces a
+**This is the first attempt at the R1/existence problem that produces a
 real, principled improvement rather than trading one failure mode for
 another.** null's false-positive rate: 90% -> 60%, not eliminated, but
 substantial, with the theoretical reason for the remainder well understood
@@ -2308,7 +2335,7 @@ jitter through real existence/kinematic scoring, not just "does the
 decoy get falsely matched") had never been run here before this session.
 
 **A real, instrument-breaking bug found running it for the first time,
-not a tuning issue:** `null` fired R2 10/10, immediately, regardless of
+not a tuning issue:** `null` fired R1 10/10, immediately, regardless of
 tracking quality -- confirmed directly by checking `position_error_n`
 (zero for every one of 42 episodes, including episodes with IoU=0.79-
 0.95 and zero re-identification search events at all). Root cause:
@@ -2621,7 +2648,7 @@ event-time bias exactly +0.000s, matching state-space precisely) --
 proof the wiring fix and the existence fix both work correctly together
 on a real K=2, dynamically-occluded scene. `vanish` is partially working
 (8/8 fired, 4/8 correct). `null` is the real remaining problem: 8/10
-false-positive, ALL via R5 (kinematic), zero via R2 (the existence side
+false-positive, ALL via R3 (kinematic), zero via R1 (the existence side
 is clean -- confirms the `obj=0` fix, not this section's own new work,
 is what's responsible).
 
@@ -2632,7 +2659,7 @@ search attempts) directly: the ball is genuinely lost from frame 88 to
 frame 160 (2.4 real seconds, 144 consecutive rejected re-identification
 attempts, both the physics-prior and DINO tiers), then reacquires via a
 low-confidence physics-prior match (6.37px reprojection error) at
-EXACTLY the frame GATE 2's own R5 event fires. Initial hypothesis --
+EXACTLY the frame GATE 2's own R3 event fires. Initial hypothesis --
 the deceleration-based extrapolation (`MetricTrackFit._x_motion`)
 doesn't correctly clamp velocity to zero once the ball has actually
 stopped, so its predicted position keeps drifting the longer a gap
@@ -2666,7 +2693,7 @@ reacquisition should be given, or fixing whatever produces the lateral-
 axis error specifically, are both real, scoped follow-ups, not
 one-line patches. Real-model scoring on `occlusion_corridor_moving`
 should be read with this caveat in mind until it's resolved: an
-occasional spuriously-high R5 rate on this scenario specifically may
+occasional spuriously-high R3 rate on this scenario specifically may
 reflect this measurement gap, not real model behavior -- same "know the
 instrument's own error floor before trusting what it reports"
 discipline as everywhere else in this document.
@@ -2723,7 +2750,7 @@ rate 0.017 vs target ~0.01).
 root cause was the reference ensemble's own spread, not mutant severity.**
 At default mutant severities and lam=1.0 (copied from other scenes), only
 `vanish` fired; `velocity_freeze`, `wrong_gravity`, and `jitter` all
-stayed censored, and this scene's calibrated R5 threshold (median 7.17)
+stayed censored, and this scene's calibrated R3 threshold (median 7.17)
 was substantially higher than occlusion_corridor's (2.70) or
 ramp_descent's (6.52).
 
@@ -2736,7 +2763,7 @@ Root cause: `perturb_mode="full"` (isotropic, unlike occlusion_corridor's
 a bouncing trajectory that swings bounce-apex height and bounce COUNT
 wildly across the 30-reference ensemble -- measured directly, reference
 z-position std up to ~3.5m at t=1.5s, against the ball's own ~1m total
-height range for a SINGLE trajectory. Whole-path R5 calibration
+height range for a SINGLE trajectory. Whole-path R3 calibration
 (thresholds.py) inflates to swallow that natural chaos, and even a fully
 frozen-velocity trajectory (physics stopped outright) reads as
 statistically ordinary against an envelope that wide.
@@ -2748,7 +2775,7 @@ the threshold (confirmed: GATE 1a's false-termination rate stays 0.000 at
 every `lam` tested down to 0.08, so this never risked false alarms, only
 sensitivity). `velocity_freeze` and `vanish` now fire reliably at
 `lam=0.15` alone; `wrong_gravity` and `jitter` needed their own severity
-bumped too (factor 0.6->0.4, sigma 0.05->0.15) since this scene's R5
+bumped too (factor 0.6->0.4, sigma 0.05->0.15) since this scene's R3
 threshold, even after the lam fix, is still higher than occlusion_
 corridor's -- the SAME pattern already used once for occlusion_corridor
 itself (jitter's sigma bumped 0.05->0.15 there, GATE 2's own writeup), now
@@ -2990,7 +3017,7 @@ position (was 0/89 before this fix). Full 42-episode GATE 2 re-run:
 `null`'s own false-positive rate is still 10/10 -- but for a DIFFERENT,
 now-understood reason: mean reconstruction position error is ~0.8-0.9m
 (vs. this project's own established ~0.05-0.15m floor on flat-ground
-scenes), large enough that R5's own threshold -- calibrated against
+scenes), large enough that R3's own threshold -- calibrated against
 CLEAN state-space physics variance, never against real ballistic
 reconstruction noise -- fires immediately at t=0.00s on nearly every
 episode regardless of mutant type. Traced the accuracy gap directly:
@@ -3497,7 +3524,7 @@ candidate's own (shorter) length, or the comparison doesn't broadcast --
 own truncated candidates; reused that fix rather than rediscovering it.
 
 Result, all 5 episodes: **VI50 = 1.43s, 95% CI [1.0, 1.63], censoring =
-0%, termination profile 100% R5.** Every episode failed, always via the
+0%, termination profile 100% R3.** Every episode failed, always via the
 kinematic statistic, always early (median 1.43s into a ~3s clip) --
 consistent with the single-episode finding above (a real, reliable
 undershoot of true motion), not a fluke: 5/5, not 1/1.
@@ -3611,7 +3638,7 @@ completed cleanly: **VI50=1.40s, 95% CI [1.33, 1.43], censoring=0%** --
 the median barely moved from the n=5 estimate (1.43s), but the CI
 collapsed from 0.63s wide to 0.10s wide. The termination profile also
 changed in a way n=5 couldn't have shown: 1 of 80 episodes (1.25%) failed
-via R2 (existence), not R5 -- rare enough that a 5-episode sample could
+via R1 (existence), not R3 -- rare enough that a 5-episode sample could
 easily have missed it entirely, a real example of why sample size matters
 for characterizing a FULL failure-mode distribution, not just a median.
 
@@ -3749,7 +3776,7 @@ Wan's pages are directly comparable rather than each auto-scaling to its
 own data). `scripts/render_score_report.py`, one page per real model found
 in `results/l0_demo_*.json`: VI50 + CI, bootstrap delta vs. each Baseline
 with a plain significance verdict, a Kaplan-Meier degradation curve, a
-failure-time boxplot, an R2/R5 failure-mode breakdown, and a "COMPUTED
+failure-time boxplot, an R1/R3 failure-mode breakdown, and a "COMPUTED
 READOUT" block of discrete `key = value` lines (deliberately not prose --
 every number here is templated from floats already computed by `vitals.
 stats.survival`/`vitals.detect.events`, no LLM involved anywhere in this
@@ -3757,6 +3784,70 @@ file or its inputs, verified directly by grepping the whole codebase).
 Small-n populations (Wan's current n=2) get an explicit warning band and
 are excluded from significance testing rather than silently shown as if
 comparable.
+
+**Score report, fifth pass (2026-09-11) -- three user-reported gaps,
+all real, plus two bugs found while fixing them:**
+1. *"remove the old versions of the models once the newer versions have
+   been tested"* -- `MODEL_REGISTRY` now carries `superseded_by`
+   (cosmos/cosmos14b/cosmos720p -> cosmos3nano, wan -> wan22). The report
+   omits a superseded model's page PER SCENARIO, only once the successor
+   has its own results file for that scenario (never globally -- a
+   scenario the successor hasn't run keeps its old page or it would lose
+   its only real-model result); the cover lists every omission;
+   `--include-superseded` shows everything; result files are never
+   deleted. Currently 0 omitted -- no successor population exists yet.
+2. *"some of the cosmos graphs do not have the copy last state and
+   constant velocity lines"* -- the lines were missing because the
+   RESULT FILES were: billiards and occlusion_corridor_interpenetration
+   had never had a baseline run, ramp_descent lacked copy_last_state,
+   and the report silently dropped an absent series. Root cause one
+   level down: `scripts/run_eval.py` (the baseline scorer) had stayed at
+   unrestricted R1 + R3 -- no R2, no R4, hardcoded `thresholds_median`,
+   `track_all_objects` dropped by its `load_spec` -- while the population
+   script gained all of those, so it could not even score billiards
+   correctly. It now builds the IDENTICAL STATS/R4 as
+   `run_model_population.py` and writes the same `long_horizon` block.
+   All 18 baseline populations (9 manifests x 2 adapters, n=50, mujoco)
+   regenerated in ~18s total. The report now shows a red band naming any
+   baseline that has not been run and the exact command to generate it.
+   Second finding here: baselines are scored over the manifest's FULL
+   horizon (t_max 4-8s) while real-model runs are truncated to
+   prefix+continuation frames (3.0s or 6.0s) -- a baseline failing at
+   4.5s counted as "fired" where a model would be censored at 3.0s. The
+   report now administratively RE-CENSORS each baseline at the model
+   page's own t_max (`recensor`): valid because every channel is causal
+   and the LOO thresholds are per-frame prefixes; the only end effect is
+   `extract_event`'s 0.3s persistence window, handled by censoring any
+   event with time > t_max - 0.3 (it could not have been confirmed in a
+   truncated run). A yellow band on the page states the re-censoring.
+3. *"it hasn't been updated with the new R categories"* -- the failure-
+   mode chart is drawn over every channel the detector SCORED (the
+   `thresholds_median` keys), so R2 on the P3 scenario appears at 0%
+   with its share in the title instead of vanishing (`termination_profile`
+   only carries risks that fired). R4 gets its own survival panel (model +
+   baselines) and readout lines (`R4_long_horizon_fired`, `R4_vi50`, and
+   the same per baseline); a population that predates R4 wiring (no
+   `long_horizon` block: occlusion_corridor_cosmos n=80, ramp_descent_
+   cosmos n=80, ramp_descent_high_friction cosmos/wan, ramp_descent_wan)
+   says "NOT COMPUTED -- re-run" rather than showing 0%. The cover lists
+   the four channels.
+Two bugs found on the way: (a) `beats_all_baselines` was True when the
+model's VI50 was SMALLER than every baseline's -- i.e. it failed FASTER,
+the opposite of the name. Renamed `outlasts_all_baselines`, True only
+when the model's VI50 is strictly LARGER than every baseline's, with the
+infinite cases spelled out ("undetermined (both censored past t_max)")
+instead of folded into False. (b) A baseline whose VI50 is infinite
+(never fails inside the window) made `bootstrap_vi_delta` return
+point = -inf with a NaN CI, and the `hi < 0 / lo > 0` verdict test then
+fell through to "not significant" -- for a model failing at 1.8s against
+a baseline that never fails. The verdict is now "worse (baseline never
+fails within t_max)" (and the mirror cases), displayed as -inf with "CI
+n/a". `tests/test_score_report.py` covers all of the above on synthetic
+populations. Two regenerated-baseline findings worth knowing: billiards/
+copy_last_state and interpenetration/copy_last_state have VI50 = inf on
+the first-crossing channels (a frozen scene never trips R1/R3) while R4
+fires on 60% / 8% of those episodes -- the cumulative-drift case R4 was
+built for, showing up on the baselines before any model.
 
 **Live second-by-second tracing extended to real models.**
 `scripts/plot_survival_native.py --model <name>` filters the existing
@@ -3822,7 +3913,7 @@ probe, not a full population -- confirmed directly before committing to
 n=80's ~5x greater GPU cost).** Ran cleanly on the first attempt, zero
 timeouts, zero failures -- `results/l0_demo_occlusion_corridor_
 cosmos14b.json`: **VI_50 = 1.13s, 95% CI [1.00, 1.33], n=5, termination
-profile 100% R5**, same failure signature as every other real-model
+profile 100% R3**, same failure signature as every other real-model
 result on this scenario.
 
 **The honest answer: no, the larger checkpoint does not rescue the
@@ -3848,7 +3939,7 @@ greater GPU cost).
 **What this does and doesn't settle.** It rules out "the 2B-vs-14B
 choice alone explains the result" as the dominant explanation -- a
 genuinely bigger, more capable checkpoint from the SAME model family
-shows the identical qualitative failure (100% R5, fails within ~1-1.3s
+shows the identical qualitative failure (100% R3, fails within ~1-1.3s
 of a 6s clip). It does NOT rule out every other honest caveat raised
 alongside this one (480p resolution chosen for cost/turnaround rather
 than quality; Wan's own single-frame conditioning vs. Cosmos's 5-frame
@@ -4050,7 +4141,7 @@ giving a final population of **n=79** rather than a silently-padded 80.
 
 **Real, new result, not a repeat of the short-horizon number:**
 `occlusion_corridor` Cosmos VI_50 = **1.4s**, 95% CI **[1.4, 1.4]**,
-censoring=0.00, termination profile `{R5: 1.0}` -- every episode failed,
+censoring=0.00, termination profile `{R3: 1.0}` -- every episode failed,
 consistently, at the same real time, once the model was given its own
 full native horizon (5.81s) instead of the old 3.0s cap. This is a
 materially different, and materially more informative, number than the
@@ -4286,7 +4377,7 @@ and the ConstantVelocity-vs-CopyLastState comparison is significant at
 x0.5 and x1.0 (delta +0.73s, +0.67s) -- but at x2.0, `CopyLastState`'s
 entire 40-episode population comes back **100% censored** (VI_50=inf,
 bootstrap CI=[nan, nan]), because the reference ensemble at that much
-wider spread calibrates an R5 threshold loose enough that "predict
+wider spread calibrates an R3 threshold loose enough that "predict
 nothing changes" never crosses it within the clip at all. The
 ConstantVelocity-vs-CopyLastState delta at x2.0 is therefore itself
 undefined (NaN, correctly -- the same "structurally undefined median"
@@ -4499,6 +4590,8 @@ values. Where invariance fails, say so.
 | T6 | Relation head has no external baseline | trained/validated on unlimited simulator ground truth | if precision inadequate, report P3 as a gap rather than ship it weak |
 | T7 | Reference video is a clean render; candidate video is generated. Symmetry does **not** cancel this | artifact-injected validation set bounds it | bound it; never claim elimination |
 | T8 | Causal-cone bound for P5 contamination | compute conservatively from simulator state | an over-tight cone manufactures failures |
+| T9 | **R5 thresholds are not portable across machines.** theta_R5 is the null of the reproducing environment's own renderer + codec (measured 1.31-1.63px on the Modal orchestrator vs the 1.0px floor on a laptop, 2026-09); an R5-bearing number reproduced elsewhere must recalibrate that null first, and populations are merged only on the environment that scored them (`--merge-existing` refuses a >5% theta mismatch -- the refusal is the check working) | publish theta_R5 with every population and the environment it came from; recalibrate, never copy | real: R5 rates compare across models within one environment, not across environments |
+| T10 | **Pixel-side shape descriptors carry a systematic segmentation bias.** SAM2's tracked mask of a soft body resting on the floor is ~13% larger than the rendered silhouette (contact shadow absorbed), so R6/R7 for pixel-measured candidates are calibrated against references measured through the SAME Phi path (`scripts/build_phi_references.py`), not against state-space references (8.3: the reference absorbs systematic error) | per-scenario Phi-measured reference band; the state-vs-Phi band gap is published as the descriptor's instrument floor | a video model whose shadows differ from the render's will pay that difference as a shape penalty |
 
 ---
 
@@ -4570,7 +4663,1379 @@ non-planar work above):**
    out-of-scope for v1 above ("fluids"), for the same reason. Would need a
    genuinely different tool, not a MuJoCo scene.
 
+**Future measurement gaps, recorded 2026-09 (scoped, not yet built -- same
+discipline as the scene ideas above: a real design pass happened, nothing
+here is scheduled). Two items survive; two candidates that looked real at
+first were found to collapse into the first once pushed on directly --
+recorded below because the reasoning is the actually useful part, not
+just the conclusion.**
+
+1. **P1-lite (invariant substrate) -- R5, scoped, DEPRIORITIZED (2026-09,
+   see below).** Full P1
+   needs a learned static-keypoint/camera-pose tracker + PnP/BA (real
+   research effort, stays out of scope, same as full P3's relation head
+   in §10). P1-lite substitutes a much weaker, classical-CV-only claim:
+   **nothing not explicitly modeled as a dynamic object should change,
+   because every scenario in this project shares a fixed camera and
+   static, non-object scene geometry by construction** (input-
+   normalization protocol item 10) -- that's not a per-scenario fact to
+   configure, it's already true of every manifest here, including ones
+   that don't exist yet.
+
+   Mechanism: from the rendered PREFIX's own frame-0 ground-truth
+   segmentation (same privilege tier `frame0_mask` already uses), sample
+   two kinds of patches, both scenario-agnostic by construction (no
+   scenario ever needs a hardcoded region name):
+   - **Background patches** -- anywhere the frame-0 segmentation shows no
+     modeled object (this generalizes correctly to a scene with a dynamic
+     occluder, `occlusion_corridor_moving`, for free: the occluder IS a
+     modeled object, K includes it, so its region is excluded from
+     "background" the same way the tracked ball already is, no special
+     case needed).
+   - **Object-region patches** -- inside a tracked object's own mask,
+     checking its known-invariant properties (apparent size, color/
+     material) against its own frame-0 value, NOT position, which
+     legitimately changes. (2026-09 correction, found directly by pushing
+     on the design rather than shipping the first draft: this half was
+     missing from the initial scoping, which only sampled background --
+     a rigid ball's radius/color has exactly the same "should not change"
+     status as a wall's position, and excluding object regions entirely
+     was a mechanical sampling choice, not a statement that P1's own
+     principle doesn't apply there too.)
+
+   Both patch kinds get tracked (simple template-match / normalized
+   cross-correlation / optical flow -- no SAM2, no DINO, no re-
+   identification, no new model to train) across the FULL frame sequence,
+   including across the prefix -> continuation boundary, so the
+   comparison point is always the REAL prefix, never the model's own
+   possibly-already-wrong first generated frame. A patch whose sampled
+   frame-0 location later falls inside a DIFFERENT tracked object's own
+   state-space footprint (computable from the conditioning trajectory
+   MuJoCo already simulated) is NaN'd for those frames -- same "NaN when
+   a defined comparison isn't available" convention `sigma_
+   interpenetration` already established, not silently dropped or
+   scored as zero drift.
+
+   Statistic: `sigma_frame(t) = max over patches of (position drift in
+   pixels, normalized by frame size, OR photometric change)` -- max, not
+   mean, one bad patch is a real violation regardless of how many good
+   ones exist alongside it (same one-sided logic `sigma_
+   interpenetration` already uses). Calibrated via the exact same LOO
+   reference-ensemble mechanism as every other detector here (`estimate_
+   threshold` on pure re-renders of ground-truth state, no video model
+   involved) -- expected to calibrate very tight, since a re-render of
+   ground truth has no reason to drift beyond rendering/antialiasing
+   noise, unlike R3's threshold, which has to compete against real
+   between-seed physical variance.
+
+   Precedence: R5, top of the existing table, unchanged. Open question,
+   not decided here: per §3.6's own logic an R5 violation arguably makes
+   R1/R2/R3 findings for that same episode ill-defined too (if the camera
+   drifted, is a kinematic finding even trustworthy?) -- a real question
+   for whoever calibrates this, not resolved by this scoping pass.
+
+   **Two candidate categories that looked real but collapse into this
+   one, and why the collapse actually holds (not just "seems related"):**
+   - *Conditioning/semantic fidelity* (does the output match what it was
+     actually given -- right object color, a described collision that
+     actually happens) -- collapses because R5's own comparison point is
+     the TRUE prefix's ground truth, not the model's own output. A wrong-
+     colored object or wrong background isn't a subtle drift to detect,
+     it's a large deviation from the true prefix, visible at the very
+     first generated frame, already caught by the object-region/
+     background patches above. The dynamic half (an entailed event that
+     never happens) collapses into R3 instead: if the reference
+     ensemble's own physics says an object should start accelerating once
+     contact occurs and the candidate's object doesn't, that's the
+     object's own kinematics failing to match the reference distribution
+     -- already R3's job, applied to every object the scenario entails
+     motion for, not only the one labeled primary. Caveat, stated
+     plainly: this collapse relies on `scenario_prompts.py`'s own
+     discipline (frozen prompts are "plain descriptions of what's
+     actually in each scene," never an instruction for content absent
+     from the conditioning) -- a differently-designed conditioning
+     protocol (prompts asking for something with no visual analog in the
+     prefix) would reopen a residual gap with nothing privileged to check
+     it against.
+   - *Shape/scale permanence* -- collapses directly into the object-
+     region patch addition above; this was the specific gap that
+     addition was built to close, not a separate thing living alongside
+     it.
+
+   **R5 is NOT state-fundamental the way R1/R2/R3 are -- found directly
+   (2026-09), asked directly: "if R5 needs raw pixels, doesn't that make
+   it not a fundamental diagnosable failure and instead limited to
+   pixel-based world models?"** Correct, and not a limitation this
+   scoping pass introduced -- it was already true of FULL P1 before any
+   of this session's work, just not stated plainly until pushed on.
+   `sigma_existence`/`sigma_interpenetration`/`sigma_kinematic` (R1/R2/
+   R3) read only `Trajectory.pos`/`.present` -- nothing about video
+   anywhere in them, so they apply unchanged to any world model that
+   predicts state directly, pixels or not. P1 -- "frame structure," the
+   word FRAME meaning a video frame -- has never been representation-
+   agnostic even in its original full-scope form (a static-keypoint/
+   camera-pose tracker is inherently about a rendered representation).
+   So: **R1/R2/R3 are state-fundamental** (meaningful for any world
+   model, any output modality); **R5 is output-modality-scoped**
+   (meaningful only for a model whose predictions are pixels --
+   vacuously undefined, not "passed," for a hypothetical state-space-
+   native world model, the same "genuinely not-applicable" status R2
+   already has for a K=1 scenario, just conditioned on the MODEL's own
+   type rather than the SCENE's). True of every real model this project
+   integrates today (Cosmos/Wan/Hunyuan are all pixel generators), but a
+   narrower theoretical claim than R1/R2/R3 make, and worth stating
+   plainly rather than presenting R5 as equally fundamental.
+
+   **DEPRIORITIZED (2026-09)** in favor of item 2 below, precisely
+   because of this asymmetry -- item 2 was picked specifically for
+   being the fundamental, representation-agnostic one. R5's own design
+   (patch sampling/tracking, `vitals/phi/frame_consistency.py`) stays
+   recorded here, scoped and ready, not abandoned.
+
+2. **Long-horizon / cumulative consistency -- R4 (2026-09, BUILT and
+   validated against real reconstructed cosmos episodes -- REPURPOSED
+   from "identity," the original R4; see the note below for why that
+   slot was empty enough to give up), a statistical extension applicable
+   to ANY existing risk channel.** `vitals/detect/long_horizon.py`;
+   wired into `scripts/run_model_population.py` as an independent
+   `long_horizon` result block, never merged into the primary `survival`
+   event. Two real normalization bugs were found and fixed by validating
+   against real reference-ensemble/cosmos data before trusting the
+   design -- see that module's own docstring for both (a naive ratio
+   against R1's own degenerate, exactly-zero threshold/baseline blew up
+   by 6+ orders of magnitude the first time this ran against real data;
+   the fix normalizes against the GAP between each channel's own typical
+   value and its own calibrated threshold, not either alone). Not yet
+   wired into `run_lambda_sweep.py` or `run_gate2.py` -- open follow-up.
+   The gap this closes: every detector here (R5
+   above included) is a first-SUSTAINED-threshold-crossing design --
+   calibrated per time bin,
+   robust to single-frame noise via the persistence window `pi`, but
+   structurally blind to a SLOW, systematic, individually-sub-threshold
+   deviation that only becomes real evidence once accumulated over the
+   full horizon. Concretely: a bounce sequence where the ball gains a
+   little height on each successive bounce -- impossible under real
+   physics, but if the per-bounce gain is small enough, no single frame's
+   velocity/acceleration ever looks like an outlier against that bin's
+   own calibrated threshold.
+
+   Explicitly NOT "energy conservation" -- checked directly against this
+   project's own scenes before proposing this, not assumed: every real
+   scenario here is deliberately DISSIPATIVE (`occlusion_corridor`'s own
+   calibrated `OCCLUSION_CORRIDOR_DECELERATION`, `ramp_descent_high_
+   friction`'s explicit slow-to-a-stop design). A naive "total mechanical
+   energy must stay constant" rule would be WRONG by design on every
+   scenario this project has. The real, generalizable claim has to be
+   "the trajectory's own aggregate/cumulative behavior stays consistent
+   with how the REFERENCE ensemble's own physics evolves it, friction and
+   all" -- not a fixed physical formula, calibrated the same way
+   everything else here is.
+
+   Mechanism: a CUSUM-style (cumulative sum control chart -- standard
+   statistical-process-control technique for detecting a small, sustained
+   shift a per-sample threshold misses) running sum of the SIGNED
+   per-frame residual underlying whichever existing `sigma_k(t)` signal
+   is relevant (R3's kinematic residual for the bounce-height case;
+   equally applicable to R5's frame-drift signal, R1's existence signal,
+   or R2's interpenetration ratio) -- a persistent one-directional bias
+   grows LINEARLY in a running sum; symmetric zero-mean noise stays
+   bounded (~sqrt(t)). That asymmetry is exactly what makes this
+   sensitive to systematic drift specifically, without needing a tighter
+   per-frame threshold that would also inflate false positives on
+   ordinary episode-to-episode noise -- fixing the statistic, not
+   lowering the threshold, the same principle §4's anti-pattern table
+   already states for a detector that doesn't fire.
+
+   Calibrated via the same LOO/`estimate_threshold` mechanism, applied to
+   the CUMULATIVE statistic's own between-seed distribution -- which
+   already reflects whatever real between-seed variance the reference
+   ensemble's own physics naturally has (different seeds bounce to
+   different heights too), the same way every other calibrated threshold
+   here absorbs natural variance instead of hardcoding a tolerance.
+
+   **Precedence, decided (2026-09): R4 does NOT compete in the SAME
+   first-sustained-crossing race as R5/R1/R2/R3.** Checked directly
+   against `extract_event`'s own actual behavior before deciding, not
+   assumed: it returns exactly ONE winning `Event` per episode, silently
+   discarding every other channel's own crossing info -- if R4 simply
+   joined the same `STATS` dict, an early R3 hit would suppress a real R4
+   finding entirely, the opposite of this detector family's whole point
+   (per-failure-mode specificity, not one collapsed verdict). So R4 is
+   scored INDEPENDENTLY -- its own call to `extract_event` (or `_first_
+   sustained_crossing` directly) with only its own signal/threshold,
+   producing a SEPARATE event reported alongside, never instead of, the
+   primary R5/R1/R2/R3 result. `events.py`'s own `PRECEDENCE` list drops
+   `"R4"` entirely as a result -- it was never a real dependency-chain
+   rank for the NEW R4 (there's no "R4 broken makes R2/R3 ill-defined"
+   claim here, unlike the retired identity meaning actually had), so
+   leaving it in a list whose whole purpose is mutual-exclusion ranking
+   would misrepresent it as competing for something it deliberately
+   doesn't.
+
+   **Why R4 was repurposable at all -- identity, pushed on directly
+   ("what should R4 be measuring then? because if nothing of value, then
+   we can replace R4"), didn't hold up as a large, distinct, irreducible
+   category the way this one does:** for two visually distinguishable
+   objects, an identity swap manifests as an appearance discontinuity --
+   already covered by R5's own object-region appearance check (once
+   built). For two indistinguishable objects, "swap happened" isn't even
+   a well-defined event, the same way indistinguishable-particle labeling
+   isn't physically meaningful past a crossing. The remaining case --
+   Phi's OWN reconstruction silently mis-attaching identity after
+   occlusion, independent of the model under test -- is a real instrument
+   question, but GATE 2's existing per-object mask-IoU diagnostics
+   (`run_multiobject_episode`) would already surface it as a side effect
+   (IoU craters right at a swap), just not labeled as "identity failure"
+   explicitly. Not zero value, but not enough of a distinct residual to
+   justify its own dedicated top-level machinery, unlike long-horizon
+   consistency.
+
+   Known sharp edges: likely needs a LARGER M than the instantaneous
+   detectors to reliably calibrate natural between-seed cumulative
+   variance (same lesson M2.5 already learned scaling R2's own M from 30
+   to 100); needs a long enough horizon to have any statistical power at
+   all -- a short clip structurally can't distinguish real systematic
+   drift from noise this way, unlike a single-frame threshold crossing,
+   which needs no such minimum.
+
+**API-access models (2026-09) -- asked directly: "create an adapter so
+that world models that are only accessible with API can also be tested
+... it should not be a hard limit that any model that's open access via
+an API cannot be used."** Built as `vitals/adapters/runway.py` + an
+`access="api"` field in `MODEL_REGISTRY`. The adapter contract, the
+pixels-only conditioning (last rendered prefix frame + the scenario's
+frozen prompt, byte-identical to wan/hunyuan's own image2video calls),
+and the resample-in/resample-out discipline are all UNCHANGED -- the
+only difference is where inference runs (the provider's endpoint; no
+`remote/modal_app_*.py` exists for it). Confirmed directly from the
+runwayml 5.20.0 SDK's typed surface, not a docs summary: Runway's
+`image_to_video` endpoint is a GATEWAY accepting `gen4.5`, `gen4_turbo`,
+`veo3.1`, `seedance2`, `hailuo3`, `wan3` and more, so one adapter
+parameterized by model id covers that whole family -- a new gateway
+model is a registry line, not a new adapter. Honest differences,
+recorded in the adapter's own docstring rather than smoothed over:
+per-call billing (`cost.credits` is logged per call; `with_one_retry`
+re-bills on a transient failure), weaker reproducibility (a hosted
+`seed` carries no cross-day guarantee -- `seed_test_retest` may not be
+exactly 0), a model id that can change under you (record run dates),
+coarse integer-second durations (request the smallest covering n_frames,
+trim), and a fixed allowed-ratio set (4:3 renders map to `1104:832`).
+Output fps is read from the returned mp4's own metadata, never assumed.
+STATUS: built and unit-tested with an injected fake client (no key, no
+network); NO real paid call has been made from this project yet -- the
+900s client timeout is a placeholder to be replaced with measured task
+timings, same discipline wan's own timeout entry went through.
+
+**Orchestration moved to Modal (2026-09) -- `remote/modal_app_
+orchestrate.py` + `remote/call_orchestrate.py`.** Found directly: two
+n=50 wan populations were killed mid-run by the laptop's own low-memory
+guard (the orchestrating process needed ~55MB; the machine had ~60MB
+free), each after ~26 minutes of already-billed GPU work whose results
+then had nowhere to land. The two GPU calls were always remote; what
+was exposed was the ORCHESTRATOR (rollouts, prefix rendering,
+calibration, episode threading, caching, video tiling, JSON) living in a
+process that had to survive for hours. Now `run_model_population.main()`
+runs unchanged inside a CPU-only Modal function (repo mounted, results/
+symlinked to a `vitals-results` Volume, pulled down afterward), and
+`submit` uses `.spawn()` so the run outlives the client -- that
+detachment, not the relocation, is the fix. Headless MuJoCo via OSMesa
+was never done here before; `smoke_render` validates it with a real
+render first. Also documented in the wan timeout entry: the real fix
+for wan was the 1200s->2400s server timeout (a single isolated call
+measured at 27:46); the memory kills were the SECOND, separate failure.
+
+**Four more real models wired in (2026-09) -- asked directly: "loop in the
+other world class models so that they're ready for the next run."**
+Every repo id / pipeline class / fps / license fact was confirmed against
+the model card or the diffusers docs before any Modal app was written
+(the Hunyuan wrong-repo-name incident is why), and each got its OWN app,
+cache volume, backend name, adapter, dispatch line, timeout default, and
+unit tests. Same conditioning (last rendered prefix frame + the frozen
+prompt), same resampler, same protocol for all.
+
+- **`cosmos3nano`** -- NVIDIA Cosmos 3 (June 2026), `nvidia/Cosmos3-Nano`,
+  `Cosmos3OmniPipeline` (diffusers main), native 24 fps confirmed,
+  OpenMDW-1.1, not gated, H100. NOT Super: its ~120GB of weights need
+  multi-GPU tensor parallelism (docs) -- a future integration, not a
+  flag. Protocol decision: NVIDIA's recommended prompt path LLM-
+  upsamples via an Anthropic API call; a language model in the
+  measurement path is permanently out of scope (§11), so the SAME frozen
+  prompt is wrapped deterministically in the model-native JSON container
+  (`{"scene": ...}`, the docs' own form) -- a documented possible
+  handicap, not hidden. Safety checker kept ON (docs: mandatory). First
+  download failed on `libGL.so.1` (the guardrail's OpenCV needs system
+  GL) -- fixed with `libgl1`/`libglib2.0-0`, recorded in the app.
+- **`cogvideox15`** -- `THUDM/CogVideoX1.5-5B-I2V`, 81 frames @ 16 fps,
+  bf16 9GB with the card's own offload recipe -> A10G, the cheapest
+  tier of any real model here. **`restricted=True`**: the CogVideoX
+  LICENSE requires registration for commercial use, caps it at 1M
+  visits/month, PRC governing law -- the same clause class that made
+  hunyuan restricted. Opt-in per run.
+- **`wan22`** -- `Wan-AI/Wan2.2-I2V-A14B-Diffusers` (two-expert MoE, 14B
+  active), single `WanImageToVideoPipeline.from_pretrained` (unlike
+  2.1's manual component loading), diffusers main, 16 fps, Apache 2.0,
+  A100-80GB. Its own app so the finally-working 2.1 path is untouched.
+  Verified negative: "Wan 2.7" (blog roundups) does NOT exist as open
+  weights -- a `wan3` exists only behind Runway's API gateway.
+- **`ltx23`** -- `Lightricks/LTX-2.3-Diffusers`, `LTX2ImageToVideoPipeline`
+  (joint video+audio; audio discarded), 24 fps, frames on the VAE's 8k+1
+  grid, A100-80GB (VRAM unstated; ~19B line). **`restricted=True`,
+  VERIFIED** against the LTX-2.x Community License text itself (the
+  model card only named it; two fetches returned an index before the
+  right file, `LICENSE-2_x`, was located): entities with annual revenue
+  >= $10,000,000 need a paid license (Sec. 2.1), OFAC/export
+  restrictions (Sec. 7), and prohibited uses include competing with
+  Lightricks' products or training competing models -- the same clause
+  class as hunyuan/cogvideox15. Was provisionally restricted before the
+  text was read; the conservative default turned out to be the right
+  one.
+
+STATUS (2026-09-10, end of day) -- every one of the first real calls
+found something, exactly as this project's own "first call is a
+debugging pass" rule predicts:
+- `cogvideox15`, `wan22`, `ltx23`: deployed, checkpoints cached. LTX's
+  first download failed on the docs' own repo id (`Lightricks/LTX-2.3-
+  Diffusers` -> 401, does not publicly exist); the real one is
+  `diffusers/LTX-2.3-Diffusers` (200). Same bug class as Hunyuan's --
+  the "outgoing traffic has been disabled" error from huggingface_hub
+  means "wrong or gated repo id", not a network problem. Now hit twice.
+- `cogvideox15`'s first real generation call hit the 1800s timeout on
+  A10G with the model card's own `enable_sequential_cpu_offload()`
+  recipe (measured: >30 min, unfinished). Switched to model-level
+  offload, timeout 3600s. Re-test (2026-09-11) SUCCEEDED: **27:45
+  (1665s) on A10G**, 81 frames, 1024x768, real motion (red ball centroid
+  x=449 -> 409 px, footprint 291 -> 2786 px over the clip -- moving and
+  approaching, not static). Inside the 3600s server timeout, so A10G
+  stays; the client default 3660s in `run_model_population.py` is now a
+  measured number, not a placeholder. First-call smoke: PASS.
+- `cosmos3nano`: deployed, checkpoints cached (2026-09-11). The path
+  there took three real findings: the libGL fix got the import working;
+  then the license-mandated safety checker pulled `nvidia/Cosmos-1.0-
+  Guardrail`, a GATED repo -- attaching the `vitals-cosmos` HF token
+  moved the error 401 -> 403 ("not in the authorized list"), proving
+  the token reached the container; the account holder then accepted the
+  gate on HF (a human step, asked for directly) and the next download
+  returned CHECKPOINTS_DOWNLOADED in 1:24 (the Nano weights had already
+  cached; only the guardrail was blocked). Never routed around by
+  disabling the checker. First generation call still pending.
+- `wan22`: first real call SUCCEEDED, measured 14:48 (888s) on
+  A100-80GB -- faster than Wan2.1's 27:46, well inside the 2400s
+  timeout; 81 frames @ 16 fps, 544x720 (2.1's own aspect sizing),
+  non-blank. Mean frame-to-frame change was only 0.11 vs 3.4 on 2.1's
+  first output -- checked rather than waved through: the red ball's
+  centroid moves x=315 -> 280 -> 254 over the clip and its footprint
+  grows 55 -> 113 px (approaching the camera), so the output is real
+  motion, not a static clip; the low global mean is a ~100-px ball in
+  a ~390k-px frame. Whether the motion is physically RIGHT is R3's job
+  in a population, not a smoke test's. First-call smoke: PASS.
+  Remaining timeout defaults stay unmeasured placeholders until each
+  model has a real timed completion; smoke tests run one model at a
+  time, never concurrent with a wan population (see the wan entry).
+- `ltx23` (2026-09-11): first real call raised `ImportError: PyAV is
+  required to apply image-conditioning H.264 CRF re-compression` -- the
+  pipeline's DEFAULT conditioning path re-encodes the input frame to
+  match the video statistics it was trained on. Fixed by installing `av`
+  in the image (kept the model's own default rather than bypassing with
+  `crf=0`). Second call ran (3:45 including redeploy) but the output was
+  invalid for a reason that was MINE, not the model's: the ramp_descent
+  prompt was paired with the collision test frame (flat floor, two
+  balls), and the model dutifully hallucinated a ramp sweeping in and
+  the balls vanished by frame 12. Third call, prompt matched to the
+  frame (collision): **PASS, 3:30 wall-clock on A100-80GB** (49 frames,
+  640x480 @ 24 fps) -- both balls persist through every frame, correctly
+  colored, with shadows. Noted for later, not scored here: the camera
+  dollies in over the clip (both balls grow ~4x, floor perspective
+  changes) -- a pixel-level frame-invariance failure, precisely the
+  thing R5 was scoped for and why R5 is pixel-scoped rather than one of
+  the state-space channels; Phi's reconstruction will see it as apparent
+  motion, so R3 may fire on it. Lesson recorded: a smoke test must pair
+  the frozen scenario prompt with a frame FROM that scenario, or its
+  output says nothing about the model. `ltx23`'s 1560s client timeout is
+  now a generous measured bound, not a placeholder.
+- `cosmos3nano` (2026-09-11): first real generation call died 40s in,
+  INSIDE the license-mandated guardrail's text safety check --
+  `PermissionError: Security Violation [pathsec.open]: refusing to follow
+  a symlink at open time for '/__modal/volumes/vo-.../hf/hub/models--
+  nvidia--Cosmos-1.0-Guardrail/snapshots/<sha>/blocklist/nltk_data/
+  tokenizers/punkt_tab/english/collocations.tab'` -- the installed nltk's
+  hardened opener (CWE-59 TOCTOU guard) vs. a path that resolves through
+  a symlink. First repair attempt dereferenced per-file symlinks on the
+  volume and found ZERO: the files there are real; the error path's
+  `/__modal/volumes/...` prefix (HF_HOME is `/cache/hf`) shows the Modal
+  MOUNT POINT is the symlink, which nothing on the volume can fix. Real
+  fix (`_stage_guardrail_nltk_data` in remote/modal_app_cosmos3.py):
+  copy the guardrail snapshot's `nltk_data` tree to a real local dir and
+  export NLTK_DATA before any nltk import -- cosmos_guardrail 0.3.1 only
+  ever APPENDS its own paths (read from the wheel, not assumed), and
+  NLTK_DATA is searched first, so the checker runs exactly as shipped on
+  identical data. Never bypassed. (One intermediate "failure" was a
+  shell cwd reset on the laptop; no Modal call was made.) Then: **PASS,
+  1:03 wall-clock on H100** (49 frames, 640x480 @ 24 fps, 35 steps) --
+  the fastest real model here by an order of magnitude, and the cleanest
+  first output: both balls persist through every frame, the camera stays
+  fixed (unlike LTX's dolly), the red ball rolls right smoothly. Whether
+  the motion is physically right is R3's job in a population. The
+  1560s client timeout is now a very generous measured bound. All four
+  new open models (cogvideox15 27:45 A10G, wan22 14:48 A100-80GB, ltx23
+  3:30 A100-80GB, cosmos3nano 1:03 H100) have passed a first-call smoke
+  test with the frozen collision prompt on the collision test frame.
+- Run queue (2026-09-11, user): after the in-flight wan population,
+  **cosmos3nano populations first** ("those results are really
+  important") -- n=50, one scenario at a time through the orchestrator,
+  in the order occlusion_corridor, ramp_descent, ramp_descent_high_
+  friction, collision, occlusion_corridor_interpenetration, billiards
+  (every scenario the superseded `cosmos` has, so the score report
+  swaps pages 1:1 via `superseded_by`). At the measured 1:03/call, a
+  scenario is roughly an hour of H100 time. Then Runway.
+- **Cosmos 3 Nano, all six scenarios, n=50 each, zero failed seeds
+  (2026-09-11, ~10-15 min per scenario through the orchestrator).**
+  VI50 / old Cosmos-Predict2 / constant_velocity* / copy_last_state* /
+  R4 fired, R4 VI50 (* = baselines re-censored at t_max=3.0s):
+  occlusion_corridor 1.03 / 1.40 / 2.40 / 1.67 / 86%, 1.43;
+  ramp_descent 1.07 / 1.00 / 1.40 / 1.10 / 100%, 1.43;
+  ramp_descent_high_friction 1.03 / 1.00 / 2.40 / 1.43 / 100%, 1.30;
+  collision 1.20 / 1.23 / 1.40 / 1.23 / 100%, 1.73;
+  occlusion_corridor_interpenetration 1.07 / 1.40 / inf / inf / 82%,
+  1.70 (profile R1 2%, R3 98%, R2 scored and never fired);
+  billiards 1.20 / 1.80 / 1.73 / inf / 100%, 1.27. Every VI50 sits at or
+  within ~0.2s of the detection FLOOR (prefix ends at 1.0s + 0.3s
+  persistence = 1.03s), no scenario outlasts either trivial baseline,
+  and 100% of terminations are R3 kinematic except one R1 existence
+  episode. Two caveats recorded with the numbers, not after them: (a)
+  on occlusion_corridor the grid video shows the model RE-FRAMING the
+  scene in the continuation (tilted view, floor turning white, a green
+  band appearing) rather than moving the ball wrongly -- Phi assumes a
+  fixed camera, so re-framing reads as object motion and R3 fires at
+  the floor; the honest label is R5 (frame invariance), built but
+  unwired. On ramp_descent the camera holds and the ball genuinely
+  leaves the true path, so R3 is the right label there. An offline R5
+  pass on the grid videos was NOT trustworthy (the patch tracker drifts
+  even on the real prefix of the compressed, annotated tiles) -- raw
+  captured frames must be saved for a real R5 read. (b) The floor
+  effect: a VI50 pinned at 1.03s with a point CI means the instrument
+  cannot RANK models at this resolution; the discriminating signals at
+  this stage are R4 (long-horizon fired 82-100%, VI50 1.27-1.73s) and
+  the failure-time distribution, not VI50. Also inherent to the
+  protocol, not to this model: single-image conditioning (the last
+  prefix frame + the frozen text prompt) gives an I2V model NO velocity
+  information, which constant_velocity has by construction -- "fails
+  faster than constant_velocity" is a real result under this protocol,
+  but a weaker claim than "the model's physics is wrong." All results
+  in results/score_report.pdf; grid videos in results/videos/.
+- **Two new scenarios (2026-09-11 evening, user: "start with occlusion
+  re-emergence and stacking scenarios").** Both stay inside the existing
+  engine/renderer/Phi/detector family: a scene file, a manifest, a
+  geometry entry, a prompt -- no new measurement capability, and the
+  limits of the existing one decided the designs (stated in each scene
+  file's own comment):
+  * `occlusion_reemergence` (P2 -> R1): occlusion_corridor's floor/ball/
+    physics with a 3.5m wall (x in [4.90, 8.40]) and a TIGHT ensemble
+    (lam=2.0, velocity_x_only) in which every reference rolls fully
+    behind the wall and re-emerges inside the 3.0s real-model window --
+    so "the ball never came back" is an unambiguous R1 finding, unlike
+    occlusion_corridor where lam=6.0 deliberately splits the ensemble.
+    Tuned by simulation: the launch speed is NOT free -- below ~5 m/s the
+    ball is slip-dominated, decelerates hard and stops behind the wall
+    (4.6 m/s: x(3s)=5.9); at 6.0 m/s it rolls cleanly. Final: enters
+    occlusion 1.18+-0.04s, exits 2.46+-0.11s (latest 2.63s), 30/30
+    re-emerge, ~1.2s fully hidden, still rolling at 1.25 m/s at 3s. Its
+    own camera (OCCLUSION_REEMERGENCE_CAM, lookat 4.7 / distance 13,
+    corridor azimuth+elevation kept): under the corridor camera the ball
+    LEFT THE FRAME at x~8.5 (measured with scripts/measure_occluder_
+    visibility.py -- the "hidden" span ran to the sweep's end); under the
+    new camera the hidden span is [5.05, 8.50] with the ball visible on
+    both sides, and THAT measured span is OCCLUSION_REEMERGENCE_WALL_
+    BOUNDS, not the XML extent.
+  * `block_stack` (P3 -> R2): the ball strikes a two-block tower at
+    x=6.5 -- a 0.4kg cube with a slender 0.12x0.12x0.72m post standing on
+    it. R2 (sigma_interpenetration, obj=0 ball vs target=1 cube) scores
+    the ball not passing INTO the cube; R1/R3 the ball; R4 in parallel.
+    Two reconstruction constraints shaped it: Phi unprojects a centroid
+    onto a KNOWN plane and puts the P3 secondary object on the SAME plane
+    as the ball, so the cube's half-size equals BALL_RADIUS (both centers
+    at z=0.15) and it must SLIDE, not tip (max 3.6 deg over M=100). The
+    post is NOT state-scored (its centroid leaves every plane when it
+    tips; track_all_objects stays false) -- a stated v1 limit. Three
+    findings from the tuning sweeps, each measured, none assumed: (1) a
+    small CUBE on top never fell in 30/30 at any speed/friction tried --
+    MuJoCo takes the MAX of the two geoms' friction, so it rode along
+    with the bottom cube; a post topples instead of slipping once the
+    cube decelerates faster than g*(half-width/half-height)=1.6 m/s^2
+    (floor friction stops it at ~5.9). (2) The stock perturbation modes
+    jostle EVERY free body's start by up to ~0.2m at lam=2, which shoved
+    the top block off its 0.15m perch at t=0 in ~1/3 of references --
+    the ensemble's ambiguity was about whether the tower fell on its
+    own. New runner mode `velocity_x_only_obj0` (types.py/runner.py):
+    perturb only the launched ball; a resting stack is s_0, not Sigma.
+    (3) Impact timing vs. the 1.0s prefix set the tower position (x=6.5:
+    impact 1.55+-0.13s, earliest 1.37s at M=100). Final ensemble: post
+    toppled by 3.0s in 97/100 (the 3 are genuine ambiguity), rest-stable
+    with no strike (0.00 deg over 4s), ball/cube min separation 0.290m
+    (touching 0.30). n_reference=100, interpenetration's own 3-channel
+    precedent.
+  Baselines generated for both (n=50): constant_velocity VI50 1.67s /
+  1.57s, copy_last_state 1.10s / 1.10s (reemergence / stack), all R3.
+  Tests: tests/test_new_scenarios_2026_09.py pins registration, the
+  obj0-only perturbation contract, the cube-on-plane/topple/timing
+  properties, and every-reference-re-emerges.
+  GATE 1 (state-space, planted defects, `run_l0_demo.py`, mujoco):
+  * occlusion_reemergence -- 1a null false-termination 0.017 (target
+    0.01, passed); 1b: vanish -> R1 at t*=1.0 detected 1.0; velocity_
+    freeze -> R3 (t*=1.0, detected 2.0 -- a frozen velocity is
+    indistinguishable from steady rolling for ~1s in a tight ensemble,
+    an honest detection lag, not a miss); jitter -> R3 at 0.0; wrong_
+    gravity -> censored (undetectable on a flat floor, same as the
+    original corridor). 80-episode mixed-mutant survival VI50 1.97s,
+    profile R1 36% / R3 64%. Thresholds: theta_R3 median 2.78.
+  * block_stack -- 1a 0.000; 1b (the P3 demo path: null + teleport):
+    teleport -> R2 at t*=1.0 detected 1.0. Thresholds: theta_R2 2.40,
+    theta_R3 3.56. 80-episode teleport survival VI50 2.77s, 100% R2.
+  GATE 2 (Phi reconstruction on rendered frames, `run_gate2.py`), FIRST
+  run, 42 instances each -- a real instrument finding, the same class
+  collision hit in August, found the same way:
+  * occlusion_reemergence null: L1 fired 9/10 (L0 0/10) -- 3x R1 at
+    1.13-1.20s (occlusion ENTRY, 1.18s: the corridor's own documented,
+    still-open "coarse boundary margin" group, where the corridor sits
+    at 6/10) and 5x R3 at 2.9-3.2s (after re-emergence) + 1x R3 at 1.07s.
+    Mean track error only 0.033m, IoU 0.68.
+  * block_stack null: L1 fired 9/10 -- ALL R3, at 1.13-1.83s, i.e. on
+    the impact (1.55s). Mean track error 0.040m, IoU 0.77.
+  Cause of every R3 alarm: both manifests perturb only along x, so the
+  reference ensemble's Y/Z spread is exactly zero by construction and
+  sigma_kinematic's 1cm floor turns 1-4cm of ordinary Phi noise into
+  1-4 sigma -- collision's own August finding, verbatim. Fix, precedent-
+  backed, one line each: `SCENARIO_KINEMATIC_AXES["occlusion_
+  reemergence"] = ("block_stack") = (0,)` (statistics.py, with the
+  reasoning and the deliberate decision NOT to retro-apply it to the
+  original corridor, whose published populations were scored without
+  it). GATE 1 + GATE 2 re-run and baselines regenerated under the
+  restriction (2026-09-12):
+  * block_stack: GATE 2 null L1 0/10 (was 9/10); velocity_freeze L1 8/8
+    correct R3, bias +0.042s +-0.014; vanish L1 8/8 fire R3 not R1 (the
+    same pattern collision and ramp_descent show -- after a vanish the
+    tracker's last position freezes, and R3 wins before the existence
+    logic gives up; a known attribution limit, not new); wrong_gravity
+    undetectable on flat ground (L0 0/8, expected); jitter L0 1/8 -- a
+    SENSITIVITY cost of the x-only restriction (the planted jitter's own
+    y/z component no longer counts, and lam=2's x spread absorbs 0.15m),
+    same trade collision made. GATE 1 unchanged (1a 0.000). Baselines:
+    constant_velocity 1.57s, copy_last_state 1.13s.
+  * occlusion_reemergence: GATE 2 null L1 4/10 (was 9/10), ALL R1 at
+    1.13-1.20s = the occlusion-ENTRY class (the corridor's own is 6/10);
+    vanish L1 7/8 correct R1 at 1.0s (bias +0.025s +-0.066); but that
+    same entry alarm now HIJACKS velocity_freeze (L1 8/8 fire R1 at
+    1.07-1.20s, R1 outranks R3) and wrong_gravity (3/8 false R1). GATE 1:
+    1a 0.017, mixed survival VI50 3.47s, R1 50% / R3 50%. Baselines:
+    constant_velocity 1.83s, copy_last_state 1.10s. For a scenario whose
+    whole point is re-emergence, the entry class is the thing to fix.
+    Three hypotheses, each tested directly rather than argued:
+    (1) Partial-occlusion margin: the tracker declares the ball not-
+        visible below 50% of its max mask area, ~one radius before the
+        fully-hidden edge the measured bounds record. Registered a
+        radius-widened span (OCCLUSION_REEMERGENCE_OCCLUDER_BOUNDS) --
+        principled (measured <50%-area span [4.88, 8.66] vs widened
+        (4.89, 8.65), 1cm agreement) but it changed NOTHING: GATE 2
+        re-run byte-identical (4/10, same instances, same times).
+    (2) Wrong physics prior: this scene launches at 6 m/s vs the
+        corridor's 4.3, and x(1s) differed from the constant-
+        deceleration prediction. Measured over the reference ensemble:
+        deceleration 1.246 +- 0.001 m/s^2 in the hidden window, IDENTICAL
+        to OCCLUSION_CORRIDOR_DECELERATION; the difference was the
+        initial slip phase only. Not the cause.
+    (3) Small-object re-identification (the corridor's own documented
+        remaining group): under the first camera (lookat 4.7 / distance
+        13) the ball is 36 px in area (~7 px across) and re-emerges ~4m
+        from the look-at; when the search fails to match it, the whole
+        gap stays unexplained -> R1. Camera moved to lookat 5.2 /
+        distance 11 / elevation -45 (whole run still in frame, ball 51
+        px, bounds re-measured: fully hidden [5.04, 8.50]); GATE 2
+        re-run under it: **null L1 0/10** (from 9/10 -> 4/10 -> 0/10),
+        IoU 0.81, occlusion-flag accuracy 0.99, position error 0.033m.
+        Hypothesis (3) was the cause. vanish L1 5/8 correct R1 at 1.0s
+        (3 land as R3 at 1.07-1.3s: the post-vanish latch every scene
+        shows). One attribution limit to read the scenario with:
+        velocity_freeze L1 7/8 fire R1 (1.1-1.2s), not R3 -- a ball
+        whose speed is wrong BEHIND the wall re-emerges where the
+        physics prior does not expect it, and the instrument cannot
+        tell that from "did not re-emerge"; visible kinematic errors
+        still land as R3 (wrong_gravity/jitter behave as on the
+        corridor). So on THIS scenario, R1 reads as "did not re-emerge
+        as physics predicts" -- which is the scenario's own point --
+        and it is the pre-registered channel here. Scenario accepted
+        for real-model runs on that reading.
+  Also fixed on the way:
+  `run_gate2.py` wrote its instances table to a HARDCODED scratchpad
+  path belonging to one particular August assistant session (both new
+  scenarios' results silently landed there); it now uses VITALS_SCRATCH
+  / the system temp dir for episode frames and writes `results/gate2_
+  instances_<scenario>_<backend>.json` itself, which is the file
+  `render_gate2_report.py` actually reads.
+- **VI50 floor + R5 wired (2026-09-12, user: "fix the VI50 floor and
+  wire in R5 next").**
+  * The floor. VI50 is pinned at ~1.03s (prefix end) with a point CI on
+    every real model because nearly every episode fails within a frame
+    of taking over, so the median first-crossing cannot RANK models.
+    Fix is additive, never a redefinition of the pre-registered event:
+    (a) `restricted_mean_validity` (RMVT, the area under the KM curve to
+    t_max) and `survival_at` (S(t) at 1.5/2.0/3.0s) in stats/survival.py,
+    written into every new population (`survival.rmvt`, `rmvt_ci95`,
+    `S_at`) by both population scripts and computed from the events for
+    older files by the report, which now shows RMVT on the VI50 card,
+    `rmvt_outlasts_all_baselines`, and S(t) per series; (b) `scripts/
+    rescore_population.py` -- the M7 lambda sweep for REAL models,
+    re-scoring each cached reconstructed trajectory (results/
+    trajectories/, saved for exactly this) against reference bands at
+    lam 2/4/8/16 with no GPU, writing `results/lambda_rescore_<scenario>_
+    <model>.json`; the report prints VI50 and RMVT vs lambda and the
+    lambda at which VI50 leaves the floor. Built-in consistency check:
+    at the manifest's own lambda the re-scored VI50 must reproduce the
+    population file's.
+  * R5. Three designs were tried, each measured before the next, and
+    the record matters because the first two would have poisoned every
+    result: (1) patch drift (the original P1-lite statistic) saturates
+    at 1.0 on featureless floors (flat patch -> NCC 0) -- unusable here.
+    (2) Photometric background change anchored at the LAST REAL prefix
+    frame: rendered references through the codec differ by ~0.01
+    intensity levels, so theta calibrated to ~0.02, and a generative
+    model's first frame is never pixel-identical to a MuJoCo render --
+    that channel would fire on EVERY model at t=1.0 and, first in
+    precedence, swallow every other diagnosis. (3) As wired: GEOMETRIC
+    -- the largest estimated image motion (px) among the four quadrants
+    relative to the FIRST GENERATED frame, by plain (un-whitened) cross-
+    correlation of gradient-magnitude images with the objects' dilated
+    footprints (14 px, covers the cast shadow) zeroed in both frames.
+    Phase (whitened) correlation was tried first and tracked the ball's
+    SHADOW on featureless quadrants (18 px "motion" on a fixed-camera
+    Cosmos 3 clip); filling footprints with the anchor's pixels was
+    tried and manufactured a zero-shift peak. Null-calibrated on the
+    rendered+codec reference ensemble by the same LOO machinery (null
+    ~0.001 px), floored at R5_MIN_PX = 1.0 px (sub-pixel estimates on
+    generated video are estimator noise; the kinematic channel's own
+    1cm floor is the precedent). Validated on real smoke clips before
+    any population: Cosmos 3 Nano 0/48 frames > 1 px (fixed camera),
+    Wan2.2 0/80, CogVideoX 2/80 (isolated, inside the persistence
+    window), LTX-2.3's dolly 27/48 (median 1.5 px, p90 4.4) -- the
+    verdicts the eye gave. Photometric drift is recorded per population
+    as a DIAGNOSTIC (`frame_invariance`: boundary jump vs the render,
+    drift after it) because its null cannot be measured from renders.
+    R5 is scored for real video models only; baselines have no pixels.
+    Wiring: `make_frame_invariance_channel` (phi/frame_consistency.py),
+    `capture_frames=True` on every episode, `sigmas["R5"]` joins the
+    precedence race (R5 first).
+  * First live R5 population -- cosmos3nano / occlusion_corridor, n=50,
+    identical seeds to the 2026-09-11 run (archived at results/archive/
+    pre_r5_2026-09-12/): termination profile **R5 98% / R3 2%** (was R3
+    100%), every R5 event at 1.03s, theta_R5 1.63 px on the orchestrator
+    render (1.31 px median in the file). The magnitude was checked on
+    the run's own grid video, not assumed: estimated scene motion 4-12 px
+    within the first frames after generation starts, per-episode medians
+    8-30 px, peaks ~50 px; photometric drift ~50 intensity levels; and
+    the real->generated boundary jump only 0.3 levels. Reading: Cosmos 3
+    Nano reproduces the conditioning frame almost exactly, then moves
+    the camera and repaints the scene from the very next frame -- the
+    "kinematic" failures this scenario showed yesterday were frame-
+    invariance failures, now labeled as such. VI50 1.03s, RMVT 1.02s,
+    S(1.5)=0. The other five cosmos3nano scenarios still carry their
+    pre-R5 profiles (R3 100%); re-running them with R5 is ~15 min each.
+  * Lambda re-scoring, 9 populations (6 cosmos3nano, 3 wan): every
+    consistency check reproduced the live VI50 exactly. At the nominal
+    lambda every model is at the floor; RMVT already separates them
+    (0.61-1.20s). VI50 leaves the floor at lam=4-8 on ramp_descent,
+    ramp_descent_high_friction and collision (collision at lam=8:
+    cosmos3nano 1.90s vs wan 2.03s; lam=4: 1.30 vs 1.30) and never on
+    occlusion_corridor / interpenetration / billiards up to lam=16
+    (S(1.5) <= 0.14 everywhere). NON-MONOTONIC in lambda on ramp_descent
+    (inf at 4, 1.40 at 8, inf at 16) and billiards (1.47 at 4, 1.20 at
+    8): widening Sigma changes WHICH references exist (some leave the
+    ramp / miss a ball), so "typical" shifts -- exactly the M7 rank-
+    stability question, reported as found. results/lambda_rescore_*.json;
+    the report prints VI50 and RMVT vs lambda per page.
+- **Score report layout + per-population tracing pages (2026-09-12,
+  user: "the score report isn't rendering too cleanly ... a big gap in
+  the block before and after COMPUTED READOUT, a lot of the words go off
+  the page, and it goes over the little text at the bottom").** Model
+  pages now size THEMSELVES: the readout lines are built and wrapped
+  (100 chars, indented continuations) BEFORE the figure exists, the
+  card uses a fixed 0.185in line pitch instead of spreading lines over
+  58% of a height that grew with the count (the gaps), and the page
+  height is the sum of the block heights + bands + readout (no fixed
+  17in page, no footer -- removed as asked). R5 got its own color/label
+  in the failure-mode chart and cover key (it drew gray). Verified by
+  rasterizing a 22-line page and a small-n page.
+  `scripts/render_population_pages.py` (user: "an associated webpage
+  ... so that the user can trace over each of the lines to pinpoint the
+  exact moment where the drop occurs ... very simple and refined, with
+  no glowing dots"): one self-contained HTML page per real-model
+  population in results/pages/ (+ index.html), inline SVG step curves
+  drawn from the SAME compute_stats the PDF uses, a hover crosshair that
+  reads every series' S(t) at the cursor's instant and names the
+  model's most recent drop (time, channel, episode count), a thin rug of
+  every episode's event time under the axis, the R4 chart, the VI50/RMVT
+  vs lambda chart when a rescore exists, and the readout table. No
+  libraries, no network, no animation. Regenerated by
+  render_score_report.py on every run (`open results/pages/index.html`).
+  Failure-mode normalization fixed 2026-09-12 (user: "why does the
+  failure mode also create a bar for the ideals ... shouldn't those
+  show no failures at all?"): the chart divided by the number of
+  TERMINATIONS, so the instrument ideal (16/50 terminated) drew a
+  full-width bar like a model that failed every episode. Bars are now
+  the fraction of EPISODES terminated by t_max, split by channel, with
+  the surviving fraction left empty; the web page's failure-mode stat
+  and the PDF's `dominant_failure_mode` line state shares of episodes
+  and the fraction still valid.
+  Each page also embeds the population's own annotated grid video
+  (results/videos/<scenario>_<model>_grid.mp4: green border = real
+  prefix, red = generated continuation; green marker = true position,
+  red = Phi's reconstruction) beside the instrument ideal's grid for the
+  same seeds when it exists (user, 2026-09-12: "add the results video
+  ... so that users can also see how their models are performing beyond
+  just the stats"). H.264/yuv420p, plays in any browser, no re-encode.
+  Later the same day the videos were EMBEDDED as data URIs (the files,
+  paths and encoding were valid; the viewer refused local media via a
+  relative file:// path) and set to autoplay muted; each page carries a
+  "page generated" timestamp.
+  **Hosted (2026-09-12, user: "can we get the web view hosted with
+  vercel?"): https://vitals-visualizer.vercel.app** (the requested
+  `vitals_visualizer` cannot be a Vercel subdomain -- underscores are
+  not allowed -- so the hyphenated form was used). Vercel project
+  `vitals-visualizer`, static, linked from results/pages/.vercel.
+  Three things went wrong on the way, each found from the CLI's own
+  output: (1) `cleanUrls` in vercel.json made `/index.html` -> `/index`
+  -> `/` a redirect loop with `/` returning 404 (removed; pages are
+  plain `name.html`); (2) the first project was a claimed anonymous
+  deployment, which cannot be redeployed without `vercel login`; (3)
+  deploying results/pages IN PLACE attached the surrounding
+  repository's commit metadata, and the unverified commit-author email
+  made the hobby plan BLOCK the deployment (`TEAM_ACCESS_REQUIRED`,
+  "the commit author doesn't have permission") while the CLI waited
+  forever for it to become ready. `render_score_report.py --deploy` now
+  copies the pages to a git-free temp dir (keeping the .vercel link) and
+  deploys from there; the Cosmos 3 Super watcher calls it, so the site
+  updates with every population. The site is public to anyone with
+  the URL. Login is a one-time `npx vercel login` on the machine.
+- **First Runway population (2026-09-12 ~18:20): runway_gen4.5 /
+  occlusion_corridor, n=18, zero failed seeds.** Access resolved first:
+  Runway's API uses PREPAID credits in the developer portal, separate
+  from the app's pay-as-you-go plan (the API itself returned 400 "not
+  enough credits" while the app plan was pay-as-you-go); the user funded
+  the API organization and issued a new key, the Modal secret was
+  updated, balance read 500. Smoke: 60 frames in 51s, **24 credits per
+  2-second generation** -> 18 seeds fit the balance with one retry in
+  reserve; 44 credits remain. Single worker enforced automatically
+  (tier: 1 concurrent generation, 50/day).
+  Result -- by far the best of any model here, and the first that is
+  statistically indistinguishable from constant_velocity: VI50 2.33s
+  (CI [1.77, 2.33]), RMVT 2.33s, S(1.5)=0.83, S(2.0)=0.56, S(3.0)=0.50
+  (half the episodes survive the whole window), 100% of terminations
+  R3 kinematic, **R5 never fires** (camera holds: theta 1.63 px,
+  photometric drift 1.5 levels, boundary jump 0.8), R4 fires on only
+  17%. Delta vs constant_velocity -0.07s "not significant", vs copy_
+  last_state +0.67s "not significant" (n=18 CI is wide); RMVT 2.33 vs
+  2.36 / 1.95. Same scenario, same thresholds: cosmos3nano 1.03s / RMVT
+  1.02 (R5 98%), wan 1.13s / RMVT 1.35. Lambda re-score reproduces the
+  live VI50 exactly; VI50 rises 0.80 (lam 2) -> 2.33 (6) -> 2.43 (8) ->
+  inf (16), i.e. this model is rankable at every lambda, unlike the
+  open models. Caveats that stand: n=18 (budget), one scenario, and the
+  I2V single-image conditioning handicap applies to it as to every
+  model. Next Runway runs at 24 credits/episode as budget allows.
+- **The ideals (2026-09-12, user: "why is this not being compared
+  against the ideal? ... so that users can see how their models are
+  performing against the ideal").** Two series, both on every model
+  page (legend, KM, bars, box, failure-mode chart, a "Δ vs. ideal
+  (instrument)" card, and `gap_to_ideal` / `instrument_tax` readout
+  lines); neither gets a page of its own:
+  * `truth` -- the PHYSICS ideal: `run_eval.py --adapter truth`, the
+    candidate IS the held-out realization scored in state space.
+    Generated n=50 for all 11 manifests in seconds: survival 1.00 on
+    nine, 0.92 on occlusion_corridor_distractor/_moving (their
+    calibration has never been tuned; they have never been run on a
+    model either).
+  * `truth_render` -- the INSTRUMENT ideal: `run_model_population.py
+    --model truth_render` (not in MODEL_REGISTRY, exempt from the
+    license gate): each episode's continuation is the TRUE rollout
+    rendered by the same renderer/camera, passed through the same mp4
+    codec a model's output goes through (frame_consistency.codec_
+    roundtrip), reconstructed by Phi, scored on every channel incl. R5
+    -- GATE 2's null case at population scale, n=50, ~3 min of Phi GPU
+    per scenario. occlusion_corridor: 15/50 clean episodes terminate
+    (R1 69% at 1.4-1.6s = occlusion entry, the corridor's documented
+    class; R3 31% at 2.1-2.7s = re-emergence), S(3.0) = 0.68, RMVT 2.61s
+    vs the physics ideal's 3.00s -- that 0.39s is the instrument's own
+    tax on this scenario, and 0.68 is the ceiling ANY video model can
+    reach here. Read against it: runway_gen4.5 RMVT 2.33 (0.28s short of
+    the ceiling), wan 1.35, cosmos3nano 1.02. R5 never fires on the
+    ideal (photometric drift 0.00), R4 0%. The other seven scenarios'
+    instrument ideals followed (n=50 each, ~3-7 min of Phi GPU per
+    scenario). The full table of ceilings -- perfect-model episodes
+    terminated / S(3.0) / RMVT: billiards 0/50 1.00 3.00; block_stack
+    0/50 1.00 3.00; ramp_descent 0/50 1.00 3.00; collision 1/50 0.98
+    2.97; occlusion_reemergence 1/50 0.98 2.95; ramp_descent_high_
+    friction 3/50 0.94 2.90; occlusion_corridor_interpenetration 10/50
+    0.80 2.74 (all R1); occlusion_corridor 16/50 0.68 2.61. Two readings:
+    (a) only the two ORIGINAL occlusion scenes carry a material
+    perception tax, and it is the August R1-at-occlusion-entry class;
+    (b) occlusion_reemergence -- the same physics with the closer camera
+    and the radius-widened occluder span -- sits at 0.98, which is
+    direct evidence those two fixes were right and an argument for
+    applying them to the original corridor as a deliberate,
+    re-gated recalibration (not done; its published populations were
+    scored under the old geometry). Every model page now shows both
+    ideals and its gap to the instrument ceiling.
+  Also found on the way, by the test suite: a one-line edit to
+  EPISODE_TIMEOUT_S_DEFAULT had swallowed every model's default into a
+  comment (wan would have been abandoned at 600s); fixed before any
+  affected run, orchestrator redeployed.
+- **Runway flagships only + Cosmos 3 Super (2026-09-12, user: "i don't
+  need all of the different versions of the models in runway, i just
+  need the highest ones. i also want to loop in real cosmos 3 instead of
+  just cosmos 3 nano").**
+  * Registry pruned to one flagship per gateway family: `runway_gen4.5`
+    (verified: 2s clips, 24 credits), `runway_veo3.1`, `runway_kling3.0_
+    pro`, `runway_seedance2`, `runway_wan3_prime`, `runway_hailuo3`. The
+    turbo/fast/standard tiers were removed (gen4_turbo included). The
+    adapter now honors each model's allowed clip lengths (`durations`,
+    rounding up to the smallest that covers the 2s need, billed as such)
+    and aspect ratio from the registry; the non-gen4.5 values are the
+    documented ones and are unverified until each model's first paid
+    call. Which of them to spend credits on is the user's call: their
+    minimum clips make an episode 4-10x a gen4.5 episode.
+  * `cosmos3super`: `nvidia/Cosmos3-Super` (checked on the Hub: public,
+    diffusers-format, 88 files, 132.7 GB; `nvidia/Cosmos3-Super-
+    Text2Video` returns 401 and is NOT it). The diffusers Cosmos 3 docs
+    were read directly, not assumed: Super "does not fit on one 96 GB
+    GPU, so it needs TP"; CP is not wired into `enable_parallelism()`;
+    the only path is `examples/cosmos3/cosmos_parallel.py`'s
+    `enable_cosmos3_tensor_parallel` under `torchrun`, TP degree
+    dividing the 8 KV heads, components loaded on CPU and sharded
+    layer-by-layer, "Do not use `device_map` for this flow". So
+    remote/modal_app_cosmos3super.py runs the docs' own modular-
+    pipeline snippet (image-to-video variant) as a `torchrun
+    --nproc_per_node=4` worker inside a 4x H100-80GB container (TP=4),
+    rank 0 writes the frames; safety checker on; same frozen prompt in
+    the `{"scene": ...}` container; the helper module is cloned from
+    diffusers main at build time. Same adapter/contract as Nano
+    (`make_cosmos3_generate_fn_modal(app_name="vitals-cosmos3super")`),
+    `call_cosmos3.py --app vitals-cosmos3super`. Nano stays registered
+    beside it (no supersession -- both were asked for). Client timeout
+    3660s is a placeholder. Deployed; the 132 GB checkpoint downloaded
+    in 8:07. First real call, TP=4 on 4x H100 (2026-09-12 21:07):
+    **PASS on the first attempt, 3:51 wall-clock**, 49 frames 640x480 --
+    both open questions answered (the modular pipeline's i2v takes
+    `image=`; TP=4 has headroom at this size). Output checked the same
+    way as every other smoke clip: both balls persist through every
+    frame, camera fixed (R5-style motion median 0.31 px, 1/48 frames
+    over 1 px, photometric drift 0.5 levels -- Nano: 0.42 px, 0/48,
+    0.4), red ball rolls right. Cost model: ~4 min x 4 H100 per
+    episode, so an n=50 scenario is ~13 GPU-hours (~$50-60).
+  * First Super population -- occlusion_corridor, n=50, zero failed
+    seeds, ~40 min wall-clock with 8 concurrent 4x-H100 workers: VI50
+    1.27s (CI [1.13, 1.47]), RMVT 1.63s, S(1.5) 0.26, S(3.0) 0.20,
+    profile R3 90% / R5 10%, R4 fired 68%, photometric drift 0.5
+    levels. Same scenario, same thresholds, same seeds: Nano 1.03s /
+    RMVT 1.02 / R5 98% / drift 49.6; wan 1.13 / 1.35 / R3 100%; Runway
+    gen4.5 2.33 / 2.33 / R3 100% (n=18); instrument ceiling RMVT 2.61.
+    Reading: Super holds the camera where Nano did not (R5 10% vs 98%,
+    drift 0.5 vs 49.6 levels) -- the size step buys frame invariance --
+    and its failures are now genuinely kinematic, but it still fails
+    early (VI50 1.27, one in five episodes alive at 3s) and sits well
+    below Runway gen4.5 and the constant-velocity floor. Lambda re-score
+    reproduces the live VI50; VI50 rises 1.00 -> 1.47 over lam 2..16
+    (rankable, unlike Nano). No supersession of Nano: the two are
+    different sizes, both asked for; the report shows both.
+  * All eight scenarios (sweep finished 2026-09-13 00:5x; ~5.5h, ~$400
+    GPU): Super VI50 / RMVT / S(3.0) / R5 share, with the instrument-
+    ideal RMVT and constant_velocity RMVT for scale --
+    occlusion_corridor 1.27 / 1.63 / 0.20 / 8% (ideal 2.61, cvel 2.36);
+    ramp_descent 1.13 / 1.32 / 0.11 / 0% (3.00, 1.43); ramp_descent_
+    high_friction 1.07 / 1.06 / 0.00 / 0% (2.90, 2.46); collision 1.20 /
+    1.20 / 0.00 / 0% (2.97, 1.39); occlusion_corridor_interpenetration
+    1.43 / 1.56 / 0.10 / 14% (2.74, 2.69); billiards 1.13 / 1.15 / 0.00 /
+    0% (3.00, 1.86); occlusion_reemergence 1.20 / 1.26 / 0.06 / 0% (2.95,
+    1.83); **block_stack 2.10 / 2.19 / 0.22 / 0% (3.00, 1.57) -- the one
+    scenario where Super outlasts constant velocity**, because the ball
+    rolls 1.5s before the impact and the model keeps it rolling. Versus
+    Nano (RMVT within ~0.1 everywhere except the two occlusion scenes,
+    where Nano's camera moved): size buys frame invariance, not
+    dynamics. ramp_descent Super had 3 failed seeds (47-49, failed twice)
+    -> n=47; a --merge-existing top-up would complete it.
+  * Runway gen4.5 occlusion_corridor after the merged top-up (n=49):
+    VI50 2.43s (CI [1.90, 2.57]), RMVT 2.29, S(3.0) 0.41, R3 90% / R5 10%
+    (the camera does drift in a tenth of episodes at n=49); vs constant_
+    velocity +0.03s not significant; **vs copy_last_state +0.77s
+    "better (fails slower)" -- the first statistically significant win
+    over a baseline by any model in this benchmark.** 50,300 credits
+    remain; the daily gen4.5 chain continues.
+- **Per-seed merging + the Runway gen4.5 campaign (2026-09-12 late).**
+  `run_model_population.py --merge-existing` folds a run's seeds into the
+  existing results file for the same scenario/model (events now carry
+  `seed`; a top-level `seeds` list is written; legacy files merge only
+  when their seed list is unambiguous). Needed for top-ups (collision_
+  cosmos 37/50 etc. were never mergeable) and for API models whose daily
+  cap (50 generations/model/day on Runway's tier) is below a population.
+  Thresholds must agree within 5% or the merge is refused -- and that
+  refusal fired on the first try for a real reason: **theta_R5 depends
+  on the render environment** (orchestrator's headless render calibrates
+  to 1.31 px; the laptop's to the 1.0 px floor), so R5-scored
+  populations must be merged where they were scored (the orchestrator).
+  Campaign, session-bound and unattended: wait for the Cosmos 3 Super
+  sweep (never redeploy mid-run) -> redeploy -> merge self-test (two
+  ideal seeds into the corridor ideal, must read n=52) -> gen4.5
+  occlusion_corridor top-up seeds 19..49 (today's remaining cap) -> one
+  50-seed scenario every 24h (ramp_descent, collision, block_stack,
+  occlusion_reemergence, ramp_descent_high_friction, occlusion_corridor_
+  interpenetration, billiards), each pulled, lambda-rescored, rendered
+  and deployed. ~9.4K of the 51K credits. Cap semantics (rolling vs
+  calendar) are unknown; a batch that trips it leaves failed seeds,
+  which a later --merge-existing top-up fills.
+### M9 — Soft-body dynamics: a NEW measurement modality (pre-registered 2026-09-13)
+
+The user's brief, adopted as the design (their words summarized, decisions
+recorded here BEFORE anything is scored): "it's a new measurement modality,
+and I'd treat it that way in the plan." Rigid-body VITALS reads a pose --
+centroid + velocity -- and every detector assumes one. A deformable body
+has a configuration, not a pose. Six requirements, each with the decision
+taken and its reason:
+
+1. **State representation.** Centroid stays (a soft body's centre of mass
+   obeys the same ballistics, so R1/R3/R4 keep working unchanged on it)
+   and gains a companion SHAPE state: per frame, projected area, principal-
+   axis ratio (extent ratio of the vertex cloud's covariance), and the
+   full vertex set in state space (for a vertex-set distance vs. the
+   reference band). Implemented as an OPTIONAL `Trajectory.shape`
+   (T, K, S) array, None for every existing rigid scenario -- no rigid
+   code path changes. Phi's side: mask area and principal axes come
+   from the tracked mask directly (scale-free ratio; area made metric by
+   the known plane distance), contour IoU against rendered reference
+   masks is the expensive option, deferred until the cheap descriptors
+   have been gated.
+2. **A new channel: conservation.** Volume/area non-conservation is the
+   soft-body analogue of interpenetration (a constraint violation, cheap
+   from a mask, and "video models violate it constantly -- objects that
+   squash without bulging, or bulge without squashing"). Statistic: the
+   ratio of measured area (state space: mesh volume) to its own frame-0
+   value, compared to the reference band's ratio at that instant, in the
+   same LOO-calibrated form as every channel. PRECEDENCE PLACEMENT: at
+   the P2/P3 level -- "about the entity remaining the same entity, not
+   about its trajectory" -- i.e. after R1 existence and BEFORE R2
+   interpenetration and R3 kinematic. Named **R6 conservation** so the
+   existing numbering is not disturbed (order in PRECEDENCE already
+   differs from number: R5 first); the user can renumber later if they
+   want check-order = number restored.
+3. **A new GATE 1 floor.** The reconstruction-error floor (sigma_kinematic's
+   1cm; the 0.04-0.06m Phi floor) was measured for rigid spheres; the
+   airborne-gap lesson (ramp_descent) is that a floor must be re-measured
+   per regime, never inherited. Deformable geometry through a monocular
+   render will be worse. GATE 1 is re-run on the soft scene's own
+   references; GATE 2 measures the deformable Phi floor for BOTH the
+   centroid and each shape descriptor before any threshold is trusted.
+4. **New planted defects for GATE 2.** wrong_stiffness, wrong_damping,
+   frozen_deformation (shape held at rest while the centroid moves),
+   volume_leak (shape scaled down over time). The stiffness mutant is the
+   attribution test: the instrument must separate "wrong material" (R6 /
+   shape) from "wrong trajectory" (R3) -- the claim the whole design
+   makes.
+5. **Reference ensemble design -- DECIDED: initial conditions only.**
+   Perturb the drop/launch state (Sigma on the actor, as for rigid
+   scenarios); material parameters are part of s_0, held fixed. This
+   asks "is this the right material behaving normally", matching every
+   rigid scenario's estimand, and keeps stiffness errors detectable --
+   perturbing material would loosen the band until wrong-stiffness
+   mutants vanish (the user's own warning). A material-perturbed
+   ensemble is a separate, later experiment with its own manifest, not a
+   knob on this one.
+6. **Determinism first.** Flex is numerically stiffer than rigid contact;
+   the LOO calibration rests on references being reproducible. Checked
+   before anything else (below).
+
+Groundwork done 2026-09-13 (no scoring yet):
+* MuJoCo 3.12 flex: the project's renderer draws flex bodies, and the
+  segmentation pass labels them with object type mjOBJ_FLEX (9) and a
+  separate id space from geoms (5) -- `mujoco_renderer.py` must map flex
+  ids to object indices (today it maps geom ids only; a flex would be
+  misread as geom 0). Real, small, not yet done.
+* A hand-rolled flexcomp with `<elasticity>` and fat vertex spheres
+  never fell (qacc = -g every step, positions frozen, then blow-up);
+  MuJoCo's own `model/flex/sphere_full.xml` configuration -- CG solver,
+  tolerance 1e-6, timestep 1ms, implicitfast, `<edge equality="true"/>`,
+  vertex radius 1mm -- adapted onto this project's gray floor works: an
+  8x8x8 ellipsoid (297 vertices, 891 dof) dropped from 0.8m contacts at
+  0.26s, squashes to 0.91 of rest height while bulging to 1.02 of rest
+  width, rebounds, stays finite; 2s of simulation costs 0.6s. In-process
+  bit-reproducible (identical SHA-256 of all vertex positions over 2s);
+  cross-process check recorded below.
+* Next, in order: fix flex segmentation; `Trajectory.shape` + a runner
+  path that emits centroid/vertices/descriptors for flex objects;
+  `scenes/soft_drop.xml` + manifest (drop, and a horizontal push so
+  there is a trajectory to score); state-space references + GATE 1 with
+  the four new mutants; sigma_shape / sigma_conservation (R6); GATE 2
+  through Phi (mask descriptors); only then a first model.
+
+Built and gated 2026-09-14 (state space; GATE 2 through Phi is the next
+step and was launched the same day):
+
+* **State path.** `vitals/physics/softbody.py`: a flex is ONE tracked
+  object (row = vertex centroid, identity quaternion), its vertex cloud
+  kept in `meta["flex_vertices"]` and 3-D extras (tet volume, principal
+  extents) in `meta["flex_extras"]`; vertex bodies are excluded from the
+  runner's object list; free bodies are counted from joint types (the old
+  `nq // 7` rule read a 891-dof flex as 127 free bodies); Sigma shifts a
+  flex rigidly (same dpos/dvel on every vertex). Renderer places a flex
+  from its cloud and maps `mjOBJ_FLEX` segmentation ids. `camera_pose()`
+  gives the state side the exact camera the pixels come from.
+* **Descriptors, same footing.** `SHAPE_DESCRIPTORS = (proj_area_px,
+  proj_axis_ratio)`. Pixel side: straight from the tracked mask
+  (`reconstruct_trajectory(with_shape=True)`, set by the scenario's own
+  `reconstruct_kwargs`). State side: the projected vertices' convex hull
+  RASTERISED and read with the same mask code -- a PCA of the projected
+  vertex cloud disagreed with the filled silhouette by up to 0.07 in
+  ratio on a squashed body (volumetric sample, denser inside); hull mask
+  vs rendered mask agree within 1.4% area / 0.009 ratio.
+* **Two channels, not one.** R6 conservation = the area ratio A(t)/A(0)
+  against the band's ratio (2% floor); R7 shape = scale-free descriptors
+  (axis ratio) against the band (0.5% floor). Separated after the first
+  GATE 1 run: with area inside R7 too, volume_leak fired R7 one frame
+  before R6 (tighter floor) and precedence never saw a tie -- one
+  quantity, one channel. PRECEDENCE = R5, R1, R6, R2, R3, R7: R7 last so
+  a shape-only crossing is unambiguously "material".
+* **Scene tuning, by measurement.** (a) MuJoCo's default edge stiffness
+  (solref 0.02) squashed for ~3 frames and rested 0.8% deflected -- no
+  material defect could persist through the 0.3s window; solref 0.05
+  squashes 17% at impact, rests 7% deflected (extents), keeps mesh volume
+  within 0.96-1.06; 0.1 collapses. (b) From 0.8m the impact squash
+  cleared theta_R7 for 8 frames, one short of 9; from 1.2m it holds 77
+  frames; 1.6m adds nothing. (c) This material barely rebounds (first
+  bounce ~9mm above rest), so `wrong_damping` is a documented no-op on
+  soft_drop (kept in the library), and the trajectory tests are
+  wrong_gravity / velocity_freeze IN FLIGHT -- centroid mutants now
+  carry the vertex cloud with them (`_carry_cloud`), otherwise the
+  rendered body and the scored row disagree.
+* **GATE 1 (M=100, lam=2, velocity_x_only, alpha=0.01), final scene:**
+  null false-termination 0.017 (60 held-out) PASS; theta medians R3 2.48,
+  R6 1.66, R7 3.23. vanish -> R1 at 1.00 (+0.00); wrong_gravity -> R3 at
+  0.13; velocity_freeze(0.25s) -> R3 at 0.30 (+0.05); frozen_deformation
+  -> R7 at 0.50 (first contact); volume_leak(1.0s) -> R6 at 1.10 (+0.10);
+  wrong_stiffness -> R6 at 0.50, R7 0.1s later. **Attribution test:
+  passed in the sense that matters** -- every material mutant fires a
+  material channel (R6/R7) and never R3; every trajectory mutant fires
+  R3 and never R6/R7. Which material channel a stiffness error hits is
+  a projection fact (a softer body's silhouette flattens wider-and-
+  shorter, so area moves before ratio); R6 is now its registered
+  expectation, frozen_deformation is the converse (R7). Survival over
+  80 mixed mutants: VI50 1.87s [1.37, 2.43], profile R3 0.24 / R6 0.76.
+* **Reproducibility.** Cross-process SHA-256 of the full vertex cloud
+  (seed 1000, final scene) identical: d9d618fb1242a934.
+* **GATE 2 wiring.** `run_gate2.py` SOFT branch: R6/R7 in STATS,
+  descriptors attached at the RENDER resolution (240x320 -- area is in
+  pixels, so thresholds are recalibrated there, never reused from GATE
+  1's 360x640), the soft mutant set, flex-aware parking for vanish, and
+  `traj_shape` returned by `run_gate2_episode`. Floor for BOTH the
+  centroid and each descriptor is read from its null instances.
+* **GATE 2, first run (2026-09-14): the airborne gap, re-found.** Mask
+  tracking was fine (null IoU 0.90) but every null fired R3 at 0.13s
+  with a 9.4m position error: the flat-floor unprojection of a body
+  still 1m in the air lands metres away -- M2.7's ramp_descent finding
+  on a new scene. Handled the same way, in `scene_geometry`: plane at
+  the measured RESTING centroid height (0.112m, not the 0.175m rest
+  radius -- the soft body sits 6cm lower) and the first 40 frames
+  unreliable for position (landing ~frame 16, every reference within 1cm
+  of rest from frame 38). Shape descriptors are mask-native and keep
+  the whole clip. Two consequences stated plainly: (a) with a 1s
+  conditioning prefix the scored continuation of soft_drop is a body
+  settling and resting -- the material channels R6/R7 carry the test,
+  R3 guards drift/sliding; the in-flight trajectory mutants GATE 1 uses
+  are invisible to Phi by construction, so GATE 2's R3 test is
+  velocity_freeze at 1.5s (L0 detects it at ~3.0s). (b) A soft-body
+  scene with a scorable post-contact TRAJECTORY needs a different
+  design -- this material sheds its momentum on landing (floor friction
+  0.6 -> 0.05 changed nothing: flex contacts ignore the geom default)
+  -- e.g. a soft body released on a slope; queued, not built.
+* **GATE 2, passed (2026-09-14, runs 3-5).** Run 3 (reconstruction
+  fixed, state-space band for R6/R7): position error 0.07m, but every
+  null fired R6 at first contact -- the renderer's own segmentation
+  gives the state-side area ratio (0.80 at rest) while SAM2's tracked
+  mask is ~13% larger once the body rests on the floor (contact shadow
+  absorbed). Systematic, so the reference absorbs it (8.3):
+  `scripts/build_phi_references.py` runs the 100 references through the
+  identical Phi path and `run_gate2.py` calibrates the L1 thresholds
+  for R6/R7 on that band (theta_R6 median 5.21 vs 1.68 on the state
+  band; theta_R7 6.70 vs 5.04). Run 4 with that band, through Phi:
+  null 0/10; drift -> R3 8/8 (bias -0.07s); wrong_stiffness -> R6 8/8
+  (+0.02s); volume_leak -> R6 8/8 (+0.31s); IoU 0.86-0.91. Two
+  residuals, both real: (a) vanish fired R6 at 1.17s instead of R1 --
+  the tracker keeps returning a tiny residual mask for a few frames
+  after the object is gone and its area ratio crossed before existence
+  could be declared; fixed by defining shape only where the tracker's
+  own visibility rule holds (mask >= half the largest seen), run 5.
+  (b) frozen_deformation is invisible through Phi (0/8): the effect is
+  a ~2% axis-ratio deflection at rest, below the Phi descriptor's own
+  noise (std 0.014 vs 0.004 in state space) -- the R7 instrument floor
+  for this scene, published as such; R7 stays scored (a real model's
+  gross shape error is well above it), and soft_ramp (M9.1) carries the
+  larger, sustained deformation the channel needs.
+  Run 5/6 (2026-09-15/16, visibility rule + a size-consistency gate on
+  re-identification candidates, `reidentify.REID_SIZE_RATIO_MAX`): the
+  gate removed the floor false re-id (the 42,800-px acceptance), but a
+  planted vanish on this flat, featureless scene is still re-identified
+  onto a small residual feature (IoU 0.25), so the instrument reports
+  the collapse as R6 at t*+0.07s (8/8 caught, 0/8 labelled R1). Recorded
+  as the scene's R1 attribution residual: existence-through-Phi on a
+  scene with nothing else in it is the tracker's search accepting
+  whatever it finds -- the corridor's occluder geometry is what makes
+  R1 clean there. Not chased further: every other channel attributes
+  8/8 through Phi, and vanish is still detected within a frame.
+
+### M9.1 — soft_ramp: the soft-body scenario WITH a trajectory (2026-09-14)
+
+The user's review made the point plainly: soft_drop tests material,
+not soft-body dynamics, and the "validated across rigid and deformable
+regimes" claim waits for a soft body with a scorable post-contact
+trajectory. Built the same day, by measurement:
+* Scene: ramp_descent's own incline/legs/floor (copied verbatim, so the
+  pixel path reuses its plane equations) with a deformable ellipsoid
+  released 0.25m above the surface at x=-3.3.
+* Material, chosen on this slope: soft_drop's edge-equality material let
+  the mesh volume drift +28% mid-slope and the body died at the toe
+  (x -0.2 by 4s); volumetric elasticity young 1000 / poisson 0.3 /
+  damping 0.01 squashes 18% at first contact, stays ~5% deformed while
+  rolling, keeps volume within 0.92-1.02 and rolls the ramp and ~3m of
+  floor over 6s (x: -3.3 -> -0.08 at 2s -> 1.46 at 3s -> 3.0 at 6s);
+  young 3000 is nearly rigid (8%), young 300 collapses. Two materials
+  across two scenes is deliberate: each is part of its scene's s_0.
+* Instrument geometry: measured centroid offset 0.151m along the ramp
+  normal (std 0.005) and 0.142m above the floor (the rigid ball's is
+  0.15); settling prefix 15 frames. P4, lam 1.0, full Sigma on the
+  release state, n_reference 100 (three-channel budget), horizon 6s.
+* **GATE 1, first pass (full Sigma, lam 1.0):** null 0.000 PASS; vanish
+  -> R1; wrong_gravity / velocity_freeze / drift -> R3 (latency 0.7-1.6s:
+  theta_R3 13 -- the full-Sigma band on a rolling body is wide);
+  volume_leak -> R6 at +0.33s; wrong_stiffness and frozen_deformation
+  CENSORED: jostling the release point spreads the first-contact timing
+  so widely that the shape band absorbs a 2.5x stiffness error.
+  Measured on 40-reference bands: velocity_x_only tightens theta_R6
+  4.2 -> 2.0 and wrong_stiffness fires R6 at 1.3s; adopted in the
+  manifest (the soft body's material is still part of s_0).
+* **GATE 1, final (velocity_x_only, lam 1.0, M=100):** null 0.000 PASS;
+  theta medians R3 5.09, R6 2.76, R7 4.51. vanish -> R1 (+0.00);
+  wrong_gravity -> R3 at 0.77s; velocity_freeze(0.25s) -> R3 at 0.63s;
+  drift(1.5s) -> R3 at 1.97s; volume_leak(1.5s) -> R6 at 1.77s;
+  wrong_stiffness -> R7 at 3.83s (a MATERIAL channel, so the attribution
+  test holds -- on this scene the stiffness error shows in the rolling
+  body's axis ratio rather than its silhouette area, the converse of
+  soft_drop; the late detection is the rolling phase, where a softer
+  body flattens visibly only once it slows); frozen_deformation censored
+  (this scene's R7 floor, as on soft_drop). Survival over 80 mixed
+  mutants: VI50 4.03s [2.83, 5.57], profile R3 0.38 / R6 0.47 / R7 0.15.
+  So across the two soft scenes: R3 carries the trajectory test on
+  soft_ramp, R6/R7 carry the material test on both, and the pair covers
+  what neither does alone.
+* GATE 2 (Phi-measured band, then the mutant set through Phi): recorded
+  below when run.
+
+- Runway flagships, decided and smoked 2026-09-14 (user: "veo3.1,
+  seedance2.5, gemini omni (whatever the flagship is), and minimax h3
+  max"; NOT wan3; never kling; veo3.1 never veo3). Tier re-read from
+  organization.retrieve(): every video model now allows 5 concurrent
+  generations and 1000/day (was 1 and 50), so `run_model_population.py`
+  caps Runway at 5 workers. One paid smoke each on collision (60
+  frames): veo3.1 4s clip **160 credits**, seedance2_5 5s **150**,
+  gemini_omni_flash_1.1 4s **41**, h3_max 6s **48** (gen4.5: 24). Three
+  request-shape facts the gateway's own 400s taught: gemini_omni rejects
+  `seed` (omitted via `supports_seed=False` -- that model is not
+  seed-reproducible provider-side); h3_max rejects `ratio` (omitted via
+  `ratio=None`) and requires a prompt image >= 256px per side, so the
+  320x240 prefix frame is nearest-upscaled 2x for every model (same
+  picture, resampled back to 240x320 after); a provider-side task
+  failure is re-raised as a plain RuntimeError with the provider's
+  failure text (the SDK's own exception cannot cross a Modal boundary,
+  which hid seedance's first failure). An n=50 scenario for all four
+  costs ~20K credits; the chain launched 2026-09-14 runs occlusion_
+  corridor then collision (~40K of 49.9K), one model at a time.
+  Re-pointed the same day by the user's review (headline =
+  occlusion_reemergence) and completed 2026-09-15 07:28, 2,286 credits
+  left. What exists now, all deployed: every flagship on occlusion_
+  reemergence (n=50: veo3.1 VI50 1.17s R3 100%; seedance2.5 1.13s R3
+  97% / R5 3%; gemini_omni 1.03s R3 58% / R5 42%; h3_max 1.07s R3 65% /
+  R5 35%); the corridor case study with veo3.1 (1.70s, R3 49% / R5 49%),
+  gemini_omni (1.00s) and h3_max (2.13s, R1 17%); gemini_omni + h3_max
+  on the other six rigid scenarios (n=35 collision / ramp_descent,
+  n=20-25 the rest -- trimmed twice as the balance fell: actual cost
+  ran ~89 credits per gemini+h3 episode pair). Two readings worth the
+  reviewer's attention: (a) R5 (the model re-frames the scene) is the
+  dominant termination for h3_max on billiards (95%) and the
+  interpenetration corridor (75%, VI50 infinite -- it never fails on
+  the object channels because the camera moves first); (b) on the
+  headline scene every flagship terminates on R3 within ~1.1s, i.e. no
+  flagship outlasts the constant-velocity baseline there. seedance2.5
+  on the corridor and veo3.1/seedance2.5 on the remaining scenarios
+  need a top-up (~15K per scenario at n=50).
+
+- Runway (2026-09-11, user: "please do run runway next time it's
+  possible"; also: do NOT rerun the superseded Cosmos-Predict2
+  populations to add R4). Queued behind the in-flight wan population
+  (every population uses the `vitals-phi` GPU; one at a time). A FREE
+  balance check was added (`modal run remote/modal_app_runway_smoke.py::
+  credits`, `organization.retrieve()`, no generation): **credit_balance
+  = 0** -- a human top-up is required first. The same call exposes the
+  tier limits: gen4.5 and gen4_turbo allow 1 concurrent generation and
+  50 generations/day, so `run_model_population.py` now forces
+  `--max-workers 1` for any `provider == "runway"` model, and an n=50
+  population is exactly one day's quota (a single `with_one_retry`
+  pushes it over -- plan ~45 seeds/day/model). The tier also lists many
+  third-party models on the same gateway (veo3.1, kling3.0, seedance2,
+  wan3, hailuo3 ...) -- each is one registry entry away via the same
+  adapter, not built until asked.
+
 ---
+
+### Review decisions, 2026-09-14 (user's own review of the current state)
+
+1. **Headline scenario moves to occlusion_reemergence.** The corridor
+   is the scene where perception is worst (instrument ceiling 0.68,
+   ~0.39s instrument tax at occlusion entry); occlusion_reemergence has
+   the same physics with the closer camera and widened occluder bounds
+   and a 0.98 ceiling. Rather than recalibrate and re-run every
+   corridor population as a re-gated change, the primary cross-model
+   comparison is reported on occlusion_reemergence and the corridor is
+   kept, unchanged and with its published populations, as the
+   perception-tax case study. The report orders scenarios accordingly
+   (`HEADLINE_SCENARIO`, `CASE_STUDY_SCENARIOS`) and labels both.
+   The Runway flagship chain was re-pointed the same day: every
+   flagship runs occlusion_reemergence; the corridor keeps veo3.1
+   (done, n=50, VI50 1.70s, R3 49% / R5 49%), gemini omni and h3 max.
+2. **gemini_omni is not seed-reproducible provider-side** (the gateway
+   accepts no seed for it). This does NOT remove it from the paired
+   comparison: pairing is on the episode -- the same rendered prefix
+   and the same perturbed initial condition per seed for every model,
+   which this project controls -- not on the provider's sampler. What
+   it does mean is that re-running that population does not reproduce
+   the same videos, so it cannot be topped up with `--merge-existing`
+   as a continuation of the same draw and its numbers are replicable
+   only as a distribution. Stated per model (registry
+   `seed_reproducible=False`; the report prints it on that model's
+   pages), not buried.
+3. **theta_R5 is render-environment-specific** (1.31-1.63px on the
+   orchestrator vs the 1.0px floor on the laptop): the merge self-test
+   refusing a cross-environment merge was the system working. Stated
+   as a reproducibility constraint in section 9 below: R5 thresholds
+   and any R5-bearing number are reproducible only by recalibrating
+   R5's null on the reproducing machine's own renderer/codec, and
+   populations are merged only on the environment that scored them.
+4. **soft_drop tests material, not soft-body dynamics** (the scored
+   continuation is a settling, resting body). The "validated across
+   rigid and deformable regimes" claim waits for a soft body with a
+   scorable post-contact trajectory -- the slope scene (`soft_ramp`,
+   M9.1 below) -- which is prioritized over further Runway models.
+
+### M10 — Render-domain intervention (launched 2026-09-16)
+
+T2 (input-domain shift) is the highest residual risk and had no
+experiment. The user's framing: the headline conclusions must not be
+artifacts of one rendering distribution. Design, pre-registered before
+any model ran:
+* Two visual-only variants of the headline scene, occlusion_reemergence,
+  with byte-identical physics, geometry, keyframe, lam, perturbation and
+  seeds: **domA** (materials + lighting: wooden floor, dark-blue wall,
+  green ball, oblique key light + dim fill; same camera) and **domB**
+  (base materials; oblique camera, azimuth -65 / elevation -32, occlusion
+  span re-measured under it: hidden [5.05, 8.77] vs the base [5.04,
+  8.50]). Prompts change only the colour/material words. Verified by
+  rendering one seed under all three: identical hidden window in domA
+  (1.13-2.37s), 4 frames longer on the exit side in domB (to 2.50s), the
+  ball at 53 px (base/domA) and 76 px (domB) at t=0.
+* Because the physics is identical, the state-space series (constant_
+  velocity, copy_last_state, truth) are the base scene's, copied with a
+  note; only the instrument ideal (truth_render) and the models are
+  re-run per domain. Instrument validation per domain: GATE 2 on each
+  variant (null rate, mutant attribution, Phi floor) -- a domain that
+  moves the instrument's own floor is a finding about Phi, separated
+  from findings about the models by construction.
+* Models: cosmos3nano and cosmos3super, n=30 each, both domains (no
+  Runway credits needed). Pre-registered readouts: (1) per model, does
+  VI50/RMVT change across domains beyond the bootstrap CI; (2) does the
+  model ORDERING hold -- nano vs super within each domain, and super vs
+  the gateway models already scored on the base scene (nano has no base
+  reemergence population, so its base point is the domain runs only);
+  (3) does the termination profile (R3-dominated for both
+  Cosmos models on the base scene) survive a domain change, or does a
+  domain shift manufacture R5/R1. The claim VITALS makes is about
+  physics, so a ranking or profile that flips with the floor colour is
+  a T2 failure to publish, not to explain away.
+* **Results (chain complete 2026-09-16 14:35; n=30 per cell, bootstrap
+  95% CIs; base = the published occlusion_reemergence populations):**
+
+  | series | domain | VI50 | RMVT [CI] | censoring | episodes by channel |
+  |---|---|---|---|---|---|
+  | ideal (instrument) | base | inf | 2.95 [2.84, 3.00] | 0.98 | R3 2% |
+  | ideal (instrument) | domA | inf | 2.91 [2.74, 3.00] | 0.97 | R3 3% |
+  | ideal (instrument) | domB | inf | 2.68 [2.38, 2.94] | 0.83 | R1 13%, R3 3% |
+  | cosmos3nano | domA | 1.03 | 1.02 [0.97, 1.05] | 0.00 | R5 80%, R3 17%, R1 3% |
+  | cosmos3nano | domB | 1.03 | 1.04 [0.98, 1.08] | 0.00 | R5 93%, R3 7% |
+  | cosmos3super | base | 1.20 | 1.26 [1.15, 1.40] | 0.06 | R3 94% |
+  | cosmos3super | domA | 1.03 | 1.15 [1.03, 1.30] | 0.00 | R3 90%, R5 10% |
+  | cosmos3super | domB | 1.20 | 1.44 [1.21, 1.73] | 0.17 | R3 83% |
+
+  Readouts against the pre-registration:
+  1. **Instrument.** The materials/lighting change costs the instrument
+     nothing (domA ideal within the base CI). The viewpoint change does
+     cost it: under the oblique camera the ideal loses 13% of episodes
+     to R1 at 1.17-1.27s -- re-emergence at the far edge of the longer
+     hidden span (measured [5.05, 8.77]) is where the tracker fails to
+     re-acquire. That is a perception tax specific to domB, published
+     as its ceiling (S = 0.83), and it bounds what any model can score
+     there. GATE 2 per domain (below) is the instrument-side check.
+  2. **Ordering holds.** cosmos3super outlasts cosmos3nano in both
+     domains (RMVT 1.15 vs 1.02 in domA, 1.44 vs 1.04 in domB; CIs
+     disjoint in domB, touching in domA). cosmos3super's own RMVT across
+     base/domA/domB (1.26 / 1.15 / 1.44) stays inside overlapping CIs:
+     no domain moves it beyond what n=30 can resolve.
+  3. **Termination profiles are the stable signature, not the number.**
+     cosmos3super dies by kinematic divergence in every domain (R3 94 /
+     90 / 83%) with the camera held still; cosmos3nano dies by
+     re-framing the scene in every domain (R5 80 / 93%, and 98% on the
+     base corridor). A floor colour, a light and a camera angle did not
+     turn one failure mode into the other -- the R3-vs-R5 contrast
+     between the two Cosmos sizes is a property of the models, not of
+     the rendering distribution. This is the cross-model discovery the
+     paper can state: same VI50 (1.03s in domA), different mechanism.
+  Caveats to carry: n=30 per cell; two domains, both synthetic; VI50 is
+  pinned at the 1.03s floor for nano and for super-in-domA, so RMVT and
+  the profile carry the comparison there (the VI50-floor finding again).
+
+### M10.1 — Termination fingerprints with uncertainty (2026-09-16)
+
+The user's point: n is large enough to quantify the uncertainty in the
+fingerprints themselves, not just read them off. `scripts/termination_
+fingerprints.py` (numpy/scipy, results/termination_fingerprints.json):
+cause-specific cumulative incidence at t_max (Aalen-Johansen; equal to
+the terminal-cause proportion here since nothing is censored before
+t_max) with bootstrap-over-episodes 95% CIs; a within-domain model x
+channel association test (chi-square, exact permutation p over 20,000
+label shuffles); and the competing-risks analogue of
+cause ~ model + domain + model x domain as a multinomial logit fit by
+maximum likelihood with likelihood-ratio tests per term. Matched design:
+{cosmos3nano, cosmos3super} x {domA, domB}, n=30 per cell.
+
+  | cell | P(R3) | P(R5) |
+  |---|---|---|
+  | domA · cosmos3nano | 0.17 [0.03, 0.30] | 0.80 [0.63, 0.93] |
+  | domA · cosmos3super | 0.90 [0.77, 1.00] | 0.10 [0.00, 0.23] |
+  | domB · cosmos3nano | 0.07 [0.00, 0.17] | 0.93 [0.83, 1.00] |
+  | domB · cosmos3super | 0.83 [0.70, 0.97] | 0.00 [0.00, 0.00] |
+  | base · cosmos3super (unmatched, n=50) | 0.94 [0.86, 1.00] | 0.00 |
+
+  * Within each domain the model x channel association is decisive:
+    chi2 = 32.5 (domA) and 47.5 (domB), permutation p < 1e-4 both.
+  * Likelihood-ratio tests: model | domain LR = 92.7 (df 2, p = 7e-21);
+    domain | model LR = 1.4 (df 2, p = 0.50); interaction LR = 5.4
+    (df 2, p = 0.068).
+  * Effect size on P(R5): |model effect| = 0.82 (mean over domains) vs
+    |render-domain effect| = 0.12 (mean over models) -- a 7x ratio.
+  So: model effect >> render-domain effect for the R3/R5 distinction,
+  with the domain main effect not distinguishable from zero and the
+  interaction not significant at n=30 (its point estimate is nano's
+  extra R5 share in domB; treat it as "not excluded", not as a finding).
+  Caution stated, as asked: two domains, two models, n=30 per cell, and
+  the CIs on the minority channel within a cell run to zero.
 
 ## 12. Honest framing for the writeup
 

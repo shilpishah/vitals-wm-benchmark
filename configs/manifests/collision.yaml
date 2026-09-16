@@ -8,7 +8,7 @@ scene: scenes/collision.xml
 target_property: P4
 band: I
 lam: 2.0                  # 2026-08: raised from 1.0 after GATE 2 found real reconstruction noise
-                           # (0.061m, well within this project's own accuracy floor) still tripped R5
+                           # (0.061m, well within this project's own accuracy floor) still tripped R3
                            # near the collision moment -- the reference ensemble's own collision-TIMING
                            # variance at lam=1.0 (std=0.067s) was too tight for that noise to hide in.
                            # Checked directly, not assumed: collision-timing std scales roughly linearly

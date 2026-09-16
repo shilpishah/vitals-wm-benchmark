@@ -146,7 +146,10 @@ def test_predict_capture_frames_stores_last_capture():
     cap = model.last_capture
     n_episode_frames = prefix_len + n_continuation
     assert cap["all_frames"].shape == (n_episode_frames, 240, 320, 3)
-    assert cap["recon_pos"].shape == (n_episode_frames, 3)
+    # (T,K,3), not (T,3) -- 2026-09, billiards/multi-collision scoping:
+    # recon_pos now always carries every reconstructed object (K=1 here,
+    # a strict single-object scenario), not just a hardcoded object 0.
+    assert cap["recon_pos"].shape == (n_episode_frames, 1, 3)
     assert cap["prefix_len"] == prefix_len
     assert cap["cam_pos"] is not None and cap["cam_mat"] is not None
     # predict()'s own return value is unaffected by capture_frames
@@ -173,6 +176,54 @@ def test_predict_rejects_wrong_frame_count_from_generate_fn():
         assert False, "should reject a generate_fn that returns the wrong frame count"
     except ValueError:
         pass
+
+
+def test_predict_threads_frame0_mask_secondary_only_for_p3():
+    """2026-09: R2/sigma_interpenetration wired into real-model scoring --
+    predict() must extract and pass a second object's own ground-truth
+    frame-0 mask to phi_fn ONLY when target_property == "P3", and must
+    NOT pass it (not even as None) for a P2 scenario -- verifies both the
+    opt-in AND the no-op side of VideoWorldModel's own new `target_
+    property` docstring, using a K=2 scene (occlusion_corridor_distractor.
+    xml, reused as-is by occlusion_corridor_interpenetration's own
+    manifest) so there IS a real second object to find."""
+    from vitals.adapters.video_model import VideoWorldModel
+    from vitals.adapters.base import prefix_of
+    from vitals.types import EpisodeSpec
+    from vitals.physics import make_backend
+
+    scene = str(pathlib.Path(__file__).resolve().parents[1] / "scenes" / "occlusion_corridor_distractor.xml")
+    spec = EpisodeSpec(name="occlusion_corridor_interpenetration", scene=scene, target_property="P3",
+                        band="I", lam=6.0, n_reference=1, horizon_s=2.0, fps=30,
+                        perturb_mode="velocity_x_only")
+    rollout = make_backend("mujoco", scene=scene)
+    full = rollout(spec, seed=1)
+    conditioning = prefix_of(full, 10)
+    assert conditioning.K >= 2, "test fixture needs a real second object to be meaningful"
+
+    calls = []
+
+    def recording_phi_fn(all_frames, prefix_len, frame0_mask, cam_pos, cam_mat, fovy_deg,
+                          frame0_mask_secondary=None):
+        calls.append(frame0_mask_secondary)
+        from vitals.types import Trajectory
+        T = all_frames.shape[0]
+        return Trajectory(t=np.arange(T) / 30.0, pos=np.zeros((T, 1, 3)), quat=np.zeros((T, 1, 4)),
+                          present=np.ones((T, 1), dtype=bool), names=["ball"])
+
+    model_p3 = VideoWorldModel(scenario_name="occlusion_corridor_interpenetration", scene=scene,
+                               generate_fn=lambda frames, n: frames[:n], phi_fn=recording_phi_fn,
+                               fps=30, height=240, width=320, target_property="P3")
+    model_p3.predict(conditioning, horizon_s=0.3, n_samples=1)
+    assert len(calls) == 1 and calls[0] is not None, "P3 must pass a real frame0_mask_secondary"
+    assert calls[0].any(), "the second object's own mask must be non-empty"
+
+    calls.clear()
+    model_p2 = VideoWorldModel(scenario_name="occlusion_corridor_interpenetration", scene=scene,
+                               generate_fn=lambda frames, n: frames[:n], phi_fn=recording_phi_fn,
+                               fps=30, height=240, width=320, target_property="P2")
+    model_p2.predict(conditioning, horizon_s=0.3, n_samples=1)
+    assert len(calls) == 1 and calls[0] is None, "non-P3 must stay a strict no-op (no secondary mask at all)"
 
 
 def test_video_world_model_construction_needs_no_gpu():

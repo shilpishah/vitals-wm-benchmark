@@ -1,0 +1,29 @@
+# Declarative EpisodeSpec -- the corpus regenerates from this alone.
+# 2026-09-11, scenario scaling ("start with occlusion re-emergence and
+# stacking"): the second P3-registered manifest (after occlusion_corridor_
+# interpenetration), and the first with a real sphere-box contact and a
+# SUPPORTED object (a post standing on a cube). target_property: P3 makes
+# the population scripts add sigma_interpenetration (R2) between obj=0
+# (ball) and target=1 (box_bottom) -- the ball must not pass INTO the cube
+# -- alongside R1/R3 on the ball and R4 in parallel. The post (index 2) is
+# not state-scored; scenes/block_stack.xml's own comment says why.
+#
+# perturb_mode: velocity_x_only_obj0 -- perturb ONLY the ball. Found
+# directly while tuning: perturbing every free body (the default modes)
+# shoves the top block off its perch at t=0 in ~1/3 of references, so the
+# ensemble's "ambiguity" was about whether the tower fell on its own.
+# A resting stack is part of s_0, not of Sigma (vitals/physics/runner.py).
+#
+# n_reference: 100 -- occlusion_corridor_interpenetration's own precedent
+# for a 3-channel (R1/R2/R3) false-termination budget at alpha=0.01
+# (M=30 measured fp=0.067 there; M=100 -> 0.000). Same rule, not re-derived.
+name: block_stack
+scene: scenes/block_stack.xml
+target_property: P3
+band: I
+lam: 2.0
+n_reference: 100
+horizon_s: 4.0             # impact at 1.54+-0.11s, post toppled by 3.0s in 30/30; 4s leaves settling runway
+fps: 30
+seed: 0
+perturb_mode: velocity_x_only_obj0

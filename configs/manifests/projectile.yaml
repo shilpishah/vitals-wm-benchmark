@@ -15,7 +15,7 @@ lam: 0.15               # NOT 1.0 -- see AGENT.md M4.5's GATE 1b calibration wri
                         # launch vz enough to scatter bounce-apex height and bounce
                         # COUNT wildly across the 30-reference ensemble (measured: ref
                         # z-std up to ~3.5m at t=1.5s, against the ball's own ~1m total
-                        # height range) -- whole-path R5 calibration (thresholds.py)
+                        # height range) -- whole-path R3 calibration (thresholds.py)
                         # inflates to swallow that natural chaos, and even a fully
                         # frozen-velocity trajectory (physics stopped outright) reads as
                         # statistically ordinary against it. Confirmed empirically this

@@ -6,9 +6,9 @@
   "lam": 6.0,
   "t_max": 7.966666666666667,
   "thresholds_median": {
-    "R2": 0.0,
-    "R5": 3.7597802170051025,
-    "R4": 6.271049277843427
+    "R1": 0.0,
+    "R3": 3.7597802170051025,
+    "R2": 6.271049277843427
   },
   "gate_1a": {
     "false_termination_rate": 0.0,
@@ -26,9 +26,9 @@
     },
     {
       "label": "teleport",
-      "risk_expected": "R4",
+      "risk_expected": "R2",
       "t_star": 2.0,
-      "risk_fired": "R4",
+      "risk_fired": "R2",
       "t_detected": 2.0,
       "censored": false
     }
@@ -42,7 +42,7 @@
     ],
     "censoring_rate": 0.5,
     "termination_profile": {
-      "R4": 1.0
+      "R2": 1.0
     },
     "kaplan_meier": {
       "t": [
@@ -135,12 +135,12 @@
     "events": [
       {
         "time": 5.133333333333333,
-        "risk": "R4",
+        "risk": "R2",
         "censored": false
       },
       {
         "time": 2.1666666666666665,
-        "risk": "R4",
+        "risk": "R2",
         "censored": false
       },
       {
@@ -155,7 +155,7 @@
       },
       {
         "time": 3.2333333333333334,
-        "risk": "R4",
+        "risk": "R2",
         "censored": false
       },
       {
@@ -170,17 +170,17 @@
       },
       {
         "time": 3.6333333333333333,
-        "risk": "R4",
+        "risk": "R2",
         "censored": false
       },
       {
         "time": 4.666666666666667,
-        "risk": "R4",
+        "risk": "R2",
         "censored": false
       },
       {
         "time": 5.533333333333333,
-        "risk": "R4",
+        "risk": "R2",
         "censored": false
       },
       {
@@ -190,7 +190,7 @@
       },
       {
         "time": 1.3666666666666667,
-        "risk": "R4",
+        "risk": "R2",
         "censored": false
       },
       {
@@ -205,7 +205,7 @@
       },
       {
         "time": 3.433333333333333,
-        "risk": "R4",
+        "risk": "R2",
         "censored": false
       },
       {
@@ -220,7 +220,7 @@
       },
       {
         "time": 2.0666666666666664,
-        "risk": "R4",
+        "risk": "R2",
         "censored": false
       },
       {
@@ -230,7 +230,7 @@
       },
       {
         "time": 1.8666666666666667,
-        "risk": "R4",
+        "risk": "R2",
         "censored": false
       },
       {
@@ -240,12 +240,12 @@
       },
       {
         "time": 4.9,
-        "risk": "R4",
+        "risk": "R2",
         "censored": false
       },
       {
         "time": 4.433333333333334,
-        "risk": "R4",
+        "risk": "R2",
         "censored": false
       },
       {
@@ -255,7 +255,7 @@
       },
       {
         "time": 5.033333333333333,
-        "risk": "R4",
+        "risk": "R2",
         "censored": false
       },
       {
@@ -275,22 +275,22 @@
       },
       {
         "time": 2.8666666666666667,
-        "risk": "R4",
+        "risk": "R2",
         "censored": false
       },
       {
         "time": 3.7666666666666666,
-        "risk": "R4",
+        "risk": "R2",
         "censored": false
       },
       {
         "time": 4.0,
-        "risk": "R4",
+        "risk": "R2",
         "censored": false
       },
       {
         "time": 1.8333333333333333,
-        "risk": "R4",
+        "risk": "R2",
         "censored": false
       },
       {
@@ -305,17 +305,17 @@
       },
       {
         "time": 2.1333333333333333,
-        "risk": "R4",
+        "risk": "R2",
         "censored": false
       },
       {
         "time": 2.5,
-        "risk": "R4",
+        "risk": "R2",
         "censored": false
       },
       {
         "time": 4.1,
-        "risk": "R4",
+        "risk": "R2",
         "censored": false
       },
       {
@@ -325,12 +325,12 @@
       },
       {
         "time": 5.166666666666667,
-        "risk": "R4",
+        "risk": "R2",
         "censored": false
       },
       {
         "time": 1.8333333333333333,
-        "risk": "R4",
+        "risk": "R2",
         "censored": false
       },
       {
@@ -340,17 +340,17 @@
       },
       {
         "time": 1.9666666666666666,
-        "risk": "R4",
+        "risk": "R2",
         "censored": false
       },
       {
         "time": 4.0,
-        "risk": "R4",
+        "risk": "R2",
         "censored": false
       },
       {
         "time": 2.8333333333333335,
-        "risk": "R4",
+        "risk": "R2",
         "censored": false
       },
       {
@@ -385,7 +385,7 @@
       },
       {
         "time": 4.066666666666666,
-        "risk": "R4",
+        "risk": "R2",
         "censored": false
       },
       {
@@ -395,12 +395,12 @@
       },
       {
         "time": 2.7,
-        "risk": "R4",
+        "risk": "R2",
         "censored": false
       },
       {
         "time": 4.2,
-        "risk": "R4",
+        "risk": "R2",
         "censored": false
       },
       {
@@ -410,7 +410,7 @@
       },
       {
         "time": 5.2,
-        "risk": "R4",
+        "risk": "R2",
         "censored": false
       },
       {
@@ -425,7 +425,7 @@
       },
       {
         "time": 1.8,
-        "risk": "R4",
+        "risk": "R2",
         "censored": false
       },
       {
@@ -440,12 +440,12 @@
       },
       {
         "time": 3.433333333333333,
-        "risk": "R4",
+        "risk": "R2",
         "censored": false
       },
       {
         "time": 2.1666666666666665,
-        "risk": "R4",
+        "risk": "R2",
         "censored": false
       },
       {
@@ -460,7 +460,7 @@
       },
       {
         "time": 3.6999999999999997,
-        "risk": "R4",
+        "risk": "R2",
         "censored": false
       },
       {
@@ -470,22 +470,22 @@
       },
       {
         "time": 3.1333333333333333,
-        "risk": "R4",
+        "risk": "R2",
         "censored": false
       },
       {
         "time": 3.466666666666667,
-        "risk": "R4",
+        "risk": "R2",
         "censored": false
       },
       {
         "time": 5.133333333333333,
-        "risk": "R4",
+        "risk": "R2",
         "censored": false
       },
       {
         "time": 3.7333333333333334,
-        "risk": "R4",
+        "risk": "R2",
         "censored": false
       },
       {
@@ -505,7 +505,7 @@
       },
       {
         "time": 5.366666666666666,
-        "risk": "R4",
+        "risk": "R2",
         "censored": false
       },
       {
@@ -515,12 +515,12 @@
       },
       {
         "time": 4.333333333333333,
-        "risk": "R4",
+        "risk": "R2",
         "censored": false
       },
       {
         "time": 5.466666666666667,
-        "risk": "R4",
+        "risk": "R2",
         "censored": false
       },
       {

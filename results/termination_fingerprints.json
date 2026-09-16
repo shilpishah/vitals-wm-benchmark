@@ -1,0 +1,186 @@
+{
+ "cells": {
+  "occlusion_reemergence_domA:cosmos3nano": {
+   "n": 30,
+   "t_max": 3.0,
+   "cif": {
+    "R1": {
+     "point": 0.03333333333333335,
+     "lo": 0.0,
+     "hi": 0.10000000000000002
+    },
+    "R3": {
+     "point": 0.16666666666666669,
+     "lo": 0.03333333333333333,
+     "hi": 0.30000000000000004
+    },
+    "R5": {
+     "point": 0.7999999999999999,
+     "lo": 0.6333333333333334,
+     "hi": 0.9333333333333333
+    },
+    "other": {
+     "point": 0.0,
+     "lo": 0.0,
+     "hi": 0.0
+    }
+   }
+  },
+  "occlusion_reemergence_domA:cosmos3super": {
+   "n": 30,
+   "t_max": 3.0,
+   "cif": {
+    "R1": {
+     "point": 0.0,
+     "lo": 0.0,
+     "hi": 0.0
+    },
+    "R3": {
+     "point": 0.8999999999999999,
+     "lo": 0.7666666666666666,
+     "hi": 1.0
+    },
+    "R5": {
+     "point": 0.10000000000000002,
+     "lo": 0.0,
+     "hi": 0.23333333333333334
+    },
+    "other": {
+     "point": 0.0,
+     "lo": 0.0,
+     "hi": 0.0
+    }
+   }
+  },
+  "occlusion_reemergence_domB:cosmos3nano": {
+   "n": 30,
+   "t_max": 3.0,
+   "cif": {
+    "R1": {
+     "point": 0.0,
+     "lo": 0.0,
+     "hi": 0.0
+    },
+    "R3": {
+     "point": 0.06666666666666667,
+     "lo": 0.0,
+     "hi": 0.16666666666666669
+    },
+    "R5": {
+     "point": 0.9333333333333333,
+     "lo": 0.8333333333333334,
+     "hi": 1.0
+    },
+    "other": {
+     "point": 0.0,
+     "lo": 0.0,
+     "hi": 0.0
+    }
+   }
+  },
+  "occlusion_reemergence_domB:cosmos3super": {
+   "n": 30,
+   "t_max": 3.0,
+   "cif": {
+    "R1": {
+     "point": 0.0,
+     "lo": 0.0,
+     "hi": 0.0
+    },
+    "R3": {
+     "point": 0.8333333333333334,
+     "lo": 0.7,
+     "hi": 0.9666666666666667
+    },
+    "R5": {
+     "point": 0.0,
+     "lo": 0.0,
+     "hi": 0.0
+    },
+    "other": {
+     "point": 0.0,
+     "lo": 0.0,
+     "hi": 0.0
+    }
+   }
+  },
+  "occlusion_reemergence:cosmos3super": {
+   "n": 50,
+   "t_max": 3.0,
+   "cif": {
+    "R1": {
+     "point": 0.0,
+     "lo": 0.0,
+     "hi": 0.0
+    },
+    "R3": {
+     "point": 0.9400000000000001,
+     "lo": 0.8600000000000001,
+     "hi": 1.0
+    },
+    "R5": {
+     "point": 0.0,
+     "lo": 0.0,
+     "hi": 0.0
+    },
+    "other": {
+     "point": 0.0,
+     "lo": 0.0,
+     "hi": 0.0
+    }
+   },
+   "matched": false
+  }
+ },
+ "within_domain": {
+  "occlusion_reemergence_domA": {
+   "chi2": 32.45833333333333,
+   "p_perm": 4.999750012499375e-05
+  },
+  "occlusion_reemergence_domB": {
+   "chi2": 47.53086419753086,
+   "p_perm": 4.999750012499375e-05
+  }
+ },
+ "lrt": {
+  "model_given_domain": {
+   "lr_stat": 92.73425890238286,
+   "df": 2,
+   "p": 7.294768895936297e-21
+  },
+  "domain_given_model": {
+   "lr_stat": 1.4020807605504473,
+   "df": 2,
+   "p": 0.49606893489296344
+  },
+  "interaction": {
+   "lr_stat": 5.374609994172047,
+   "df": 2,
+   "p": 0.0680641254337833
+  },
+  "n": 115,
+  "causes": [
+   "R1",
+   "R3",
+   "R5"
+  ],
+  "models": [
+   "cosmos3nano",
+   "cosmos3super"
+  ],
+  "domains": [
+   "occlusion_reemergence_domA",
+   "occlusion_reemergence_domB"
+  ]
+ },
+ "contrast": {
+  "p_R5": {
+   "cosmos3nano:occlusion_reemergence_domA": 0.7999999999999999,
+   "cosmos3super:occlusion_reemergence_domA": 0.10000000000000002,
+   "cosmos3nano:occlusion_reemergence_domB": 0.9333333333333333,
+   "cosmos3super:occlusion_reemergence_domB": 0.0
+  },
+  "model_effect_on_P_R5": 0.8166666666666667,
+  "domain_effect_on_P_R5": 0.11666666666666672
+ }
+}

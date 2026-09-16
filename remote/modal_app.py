@@ -311,6 +311,10 @@ def run_gate2_episode(name: str, similarity_threshold: float = 0.4, forgiveness_
         traj_t=traj.t.tolist(),
         traj_pos=np.where(np.isnan(traj.pos), None, traj.pos).tolist(),
         traj_present=traj.present.tolist(),
+        # Soft-body scenarios (AGENT.md M9): the mask-derived shape
+        # descriptors (reconstruct_trajectory(with_shape=True), set by the
+        # scenario's own reconstruct_kwargs); None for every rigid scenario.
+        traj_shape=None if traj.shape is None else np.where(np.isnan(traj.shape), None, traj.shape).tolist(),
     )
     model_cache.commit()
     return summary
@@ -450,7 +454,8 @@ def diagnose_candidates(name: str, frames: str = "57,59,61,65"):
 @app.function(image=image, gpu=GPU_TYPE, volumes={"/cache": model_cache}, timeout=1200)
 def run_phi_reconstruct_from_frames(all_frames, prefix_len, scenario_name, frame0_mask,
                                     cam_pos, cam_mat, fovy_deg, fps=30,
-                                    similarity_threshold=0.4, forgiveness_frames=1):
+                                    similarity_threshold=0.4, forgiveness_frames=1,
+                                    frame0_mask_secondary=None, frame0_mask_tertiary=None):
     """Runs the REAL production Phi pipeline (`vitals/adapters/video_model.
     py`'s own `default_phi_reconstruct` -- SAM2 tracking + DINOv2
     re-identification, then 3D reconstruction) on an ALREADY-GENERATED
@@ -470,7 +475,11 @@ def run_phi_reconstruct_from_frames(all_frames, prefix_len, scenario_name, frame
 
     Returns the reconstructed `Trajectory` object directly -- `vitals.
     types.Trajectory` is importable on both sides via the same mounted
-    `vitals/` package everything else in this file already uses."""
+    `vitals/` package everything else in this file already uses.
+
+    frame0_mask_secondary: OPTIONAL, passed straight through to `default_
+    phi_reconstruct` -- see that function's own docstring (2026-09,
+    R2/sigma_interpenetration wired into real-model scoring)."""
     import sys
     sys.path.insert(0, "/root/vitals_pkg")
     from vitals.adapters.video_model import default_phi_reconstruct
@@ -478,4 +487,6 @@ def run_phi_reconstruct_from_frames(all_frames, prefix_len, scenario_name, frame
     return default_phi_reconstruct(all_frames, prefix_len, scenario_name, frame0_mask,
                                     cam_pos, cam_mat, fovy_deg, fps=fps,
                                     similarity_threshold=similarity_threshold,
-                                    forgiveness_frames=forgiveness_frames, device="cuda")
+                                    forgiveness_frames=forgiveness_frames, device="cuda",
+                                    frame0_mask_secondary=frame0_mask_secondary,
+                                    frame0_mask_tertiary=frame0_mask_tertiary)

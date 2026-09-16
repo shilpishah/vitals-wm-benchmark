@@ -71,6 +71,30 @@ _IMAGENET_STD = (0.229, 0.224, 0.225)
 # same location four times in the same gap (AGENT.md defect #18).
 STATIC_SUSPECT_RADIUS_PX = 5.0
 TIGHT_GATE_PX = 4.0
+# Size-consistency gate on re-identification candidates (2026-09-14):
+# a candidate mask whose area is outside [1/RATIO, RATIO] x the last
+# visible mask's area is not the same object. Found on soft_drop's GATE 2:
+# after a planted vanish on a flat scene (no occluder, nothing else to
+# find) the physics tier accepted a 42,800-px proposal -- the FLOOR, 56%
+# of the frame, 60x the body -- because its centroid happened to sit
+# within the position gate, and DINO then confirmed it at similarity 1.0
+# (the cached embedding had been re-cached from that same acceptance).
+# Existence stayed True on a floor track, and the size explosion was
+# reported as R6 conservation instead of R1. 4x is generous for any real
+# re-appearance (a ball at a different depth, a body squashed on impact:
+# 1.2-1.5x) and rejects only the absurd; applied to BOTH tiers, before
+# scoring, so the next-nearest plausible candidate is still considered.
+REID_SIZE_RATIO_MAX = 4.0
+
+
+def _size_consistent(candidates, last_mask, ratio=REID_SIZE_RATIO_MAX):
+    if last_mask is None:
+        return candidates
+    ref_area = float(np.asarray(last_mask).sum())
+    if ref_area <= 0:
+        return candidates
+    return [c for c in candidates
+            if ref_area / ratio <= float(np.asarray(c["segmentation"]).sum()) <= ref_area * ratio]
 
 
 def load_dino(model_name="dinov2_vits14", device="cuda"):
@@ -197,6 +221,19 @@ class ReidentifyResult:
     # than building a second search loop, is the entire point of this
     # scope -- see M5.6's own "scoping decision" note for why full
     # simultaneous-loss support was deliberately deferred.
+    masks_tertiary: dict = field(default_factory=dict)
+    # {frame_idx: (H,W) bool} -- THIRD tracked object (obj_id=3, 2026-09,
+    # billiards/multi-collision scoping), populated when track_with_
+    # reidentification is given frame0_mask_tertiary. Additive, not a
+    # generalization of masks_secondary to an N-object list: deliberately
+    # mirrors masks_secondary's own exact scope (no search-and-reprompt,
+    # SAM2 propagation only) rather than refactoring the shared, GATE-2-
+    # tested obj_id=2 path -- smaller diff, zero behavior change for every
+    # existing single-secondary caller (GATE 2's own occluder_geometry
+    # use, R2's dual-object real-model reconstruction). A genuine N>3
+    # object scenario (a full billiards rack) would need a real
+    # generalization of this pattern, not attempted here -- 2-3 balls
+    # only, matching what was actually asked for.
     known_occluded_frames: dict = field(default_factory=dict)
     # {frame_idx: bool} -- for the PRIMARY object, whether physics's own
     # occluder_bounds check found this specific search attempt's predicted
@@ -273,7 +310,8 @@ def _maybe_recache_embedding(frame_idx, masks, frame_paths, dino_model, device):
 def track_with_reidentification(sam2_predictor, dino_model, mask_gen_factory, frame_paths, frame0_mask,
                                  similarity_threshold, forgiveness_frames=1, device="cuda", dt=1.0 / 30,
                                  camera=None, deceleration=None, occluder_bounds=None,
-                                 frame0_mask_secondary=None, occluder_geometry=None):
+                                 frame0_mask_secondary=None, occluder_geometry=None,
+                                 frame0_mask_tertiary=None):
     """frame_paths: ordered list of frame file paths, the same frames
     sam2_predictor was pointed at via frame_dir (must be a directory of
     NNNNN.jpg files -- SAM2's expected layout).
@@ -354,6 +392,14 @@ def track_with_reidentification(sam2_predictor, dino_model, mask_gen_factory, fr
     strictly more accurate when available. Omit for a static-occluder or
     no-occluder scenario; `occluder_bounds` (the static tuple) keeps
     working exactly as before when this is omitted.
+
+    frame0_mask_tertiary: OPTIONAL (2026-09, billiards/multi-collision
+    scoping). A THIRD object (SAM2 obj_id=3), tracked in the SAME shared
+    propagation loop with the exact same no-search-and-reprompt scope as
+    `frame0_mask_secondary` above -- additive, not a generalization of
+    that parameter to a list, to keep this change small and leave every
+    existing single-secondary caller untouched. Omit for the K<=2 case;
+    behavior is then identical to before this parameter existed.
 
     Runs SAM2 tracking; whenever the mask has been empty for more than
     `forgiveness_frames` consecutive frames, switches to search mode:
@@ -448,6 +494,9 @@ def track_with_reidentification(sam2_predictor, dino_model, mask_gen_factory, fr
         track_secondary = frame0_mask_secondary is not None
         if track_secondary:
             sam2_predictor.add_new_mask(state, frame_idx=0, obj_id=2, mask=frame0_mask_secondary)
+        track_tertiary = frame0_mask_tertiary is not None
+        if track_tertiary:
+            sam2_predictor.add_new_mask(state, frame_idx=0, obj_id=3, mask=frame0_mask_tertiary)
 
         while start_frame < T:
             reprompted_at = None
@@ -467,6 +516,8 @@ def track_with_reidentification(sam2_predictor, dino_model, mask_gen_factory, fr
                 result.masks[frame_idx] = pred
                 if track_secondary and 2 in obj_ids:
                     result.masks_secondary[frame_idx] = (mask_logits[obj_ids.index(2), 0] > 0).cpu().numpy()
+                if track_tertiary and 3 in obj_ids:
+                    result.masks_tertiary[frame_idx] = (mask_logits[obj_ids.index(3), 0] > 0).cpu().numpy()
 
                 if pred.sum() > 0:
                     empty_streak = 0
@@ -507,6 +558,9 @@ def track_with_reidentification(sam2_predictor, dino_model, mask_gen_factory, fr
                     # the older pixel-only fit -- see track_with_reidentification's
                     # own docstring for why both paths still exist.
                     drop_frame = frame_idx - empty_streak      # last visible frame
+                    # Size gate first (REID_SIZE_RATIO_MAX): neither tier ever
+                    # sees a proposal that cannot be the same object.
+                    candidates = _size_consistent(candidates, result.masks.get(drop_frame))
                     recent = _recent_visible_run(result.masks, drop_frame)
                     use_metric = camera is not None and deceleration is not None
                     if len(recent) >= mp.MIN_FIT_FRAMES:

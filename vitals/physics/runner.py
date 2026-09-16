@@ -31,10 +31,20 @@ def body_names(model):
 
 def rollout(spec, seed, scene_path):
     import mujoco
+    from . import softbody as sb
     model, data = load(scene_path)
     rng = np.random.default_rng(seed)
-    names = body_names(model)
+    # Soft bodies (AGENT.md M9, 2026-09-13): a flex's vertices are bodies
+    # too (`<flex>_<i>`, three slide joints each) and must NOT be tracked
+    # as objects; the flex itself is ONE object whose row is its vertex
+    # centroid, with the vertex cloud kept in meta["flex_vertices"].
+    # Object order: rigid bodies (as before), then flexes.
+    vert_bodies = sb.flex_vertex_body_ids(model)
+    names = [n for n in body_names(model)
+             if mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, n) not in vert_bodies]
     ids = [mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, n) for n in names]
+    flexes = sb.flex_objects(model)
+    names = names + [f[0] for f in flexes]
     K = len(names)
 
     # s_0 comes from the scene's keyframe if it has one (e.g. occlusion_corridor's
@@ -46,29 +56,66 @@ def rollout(spec, seed, scene_path):
         mujoco.mj_resetDataKeyframe(model, data, 0)
     else:
         mujoco.mj_resetData(model, data)
-    nfree = model.nq // 7
-    if nfree:
-        if spec.perturb_mode == "velocity_x_only":
-            pert = sample_velocity_perturbation(rng, spec.lam, nfree)
+    # Free bodies are counted from joint types, not `nq // 7` -- that rule
+    # miscounts the moment a flex is present (its vertices add 3 dof each;
+    # found 2026-09-13: 891 dof -> "127 free bodies"). Each perturbable
+    # actor is either a rigid free body (qpos/qvel at its own joint
+    # address) or a whole flex (the same displacement/velocity on every
+    # vertex -- Sigma acts on the actor's initial state; its material is
+    # part of s_0, AGENT.md M9 decision 5).
+    free_joints = [int(j) for j in np.flatnonzero(model.jnt_type == mujoco.mjtJoint.mjJNT_FREE)]
+    n_actors = len(free_joints) + len(flexes)
+    if n_actors:
+        # "velocity_x_only_obj0" (2026-09-11, block_stack): perturb ONLY the
+        # first actor (the launched ball). Found directly while tuning
+        # the stacking scene: the default modes jostle EVERY free body's
+        # initial x-position by up to ~0.2m at lam=2, which shoves a 0.12m
+        # cube off its 0.15m perch at t=0 in ~1/3 of references -- the
+        # ensemble's "ambiguity" was then about whether the tower fell on
+        # its own, not about the ball. A stacked/resting configuration is
+        # part of s_0, not of Sigma; only the actor is perturbed.
+        obj0_only = spec.perturb_mode.endswith("_obj0")
+        base_mode = spec.perturb_mode[:-5] if obj0_only else spec.perturb_mode
+        if base_mode == "velocity_x_only":
+            pert = sample_velocity_perturbation(rng, spec.lam, n_actors)
         else:
-            pert = sample_perturbation(rng, spec.lam, nfree)
-        for b in range(nfree):
-            data.qpos[b * 7: b * 7 + 3] += pert["dpos"][b]
-            data.qvel[b * 6: b * 6 + 3] += pert["dvel"][b]
+            pert = sample_perturbation(rng, spec.lam, n_actors)
+        for a in range(1 if obj0_only else n_actors):
+            if a < len(free_joints):
+                j = free_joints[a]
+                qa, da = int(model.jnt_qposadr[j]), int(model.jnt_dofadr[j])
+                data.qpos[qa: qa + 3] += pert["dpos"][a]
+                data.qvel[da: da + 3] += pert["dvel"][a]
+            else:
+                _, vadr, vnum, _ = flexes[a - len(free_joints)]
+                sb.shift_flex(model, data, vadr, vnum, pert["dpos"][a], pert["dvel"][a])
     mujoco.mj_forward(model, data)
 
     n = int(spec.horizon_s * spec.fps)
     sub = max(1, int(round((1.0 / spec.fps) / model.opt.timestep)))
     t = np.arange(n) / spec.fps
     pos = np.zeros((n, K, 3)); quat = np.zeros((n, K, 4))
+    nr = len(ids)
+    flex_verts = {name: np.zeros((n, vnum, 3)) for name, _, vnum, _ in flexes}
+    flex_extras = {name: np.zeros((n, 4)) for name, _, _, _ in flexes}   # [volume, ext_major, ext_mid, ext_minor]
     for i in range(n):
-        pos[i] = data.xpos[ids]
-        quat[i] = data.xquat[ids]
+        pos[i, :nr] = data.xpos[ids]
+        quat[i, :nr] = data.xquat[ids]
+        for k, (name, vadr, vnum, elems) in enumerate(flexes):
+            V = data.flexvert_xpos[vadr: vadr + vnum].copy()
+            flex_verts[name][i] = V
+            pos[i, nr + k] = V.mean(axis=0)
+            quat[i, nr + k] = (1.0, 0.0, 0.0, 0.0)   # a configuration has no pose; identity placeholder
+            flex_extras[name][i, 0] = sb.tet_volume(V, elems) if elems is not None else np.nan
+            flex_extras[name][i, 1:] = sb.principal_extents(V)
         for _ in range(sub):
             mujoco.mj_step(model, data)
 
-    return Trajectory(t, pos, quat, np.ones((n, K), bool), names,
-                      meta={"scene": spec.scene, "lam": spec.lam, "seed": seed})
+    meta = {"scene": spec.scene, "lam": spec.lam, "seed": seed}
+    if flexes:
+        meta["flex_vertices"] = flex_verts
+        meta["flex_extras"] = flex_extras
+    return Trajectory(t, pos, quat, np.ones((n, K), bool), names, meta=meta)
 
 
 def fork(data):

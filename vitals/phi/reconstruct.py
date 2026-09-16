@@ -13,7 +13,7 @@ What this module does NOT do, on purpose, for v1:
   that matter for v1: `detect/statistics.py::sigma_existence` reads only
   `Trajectory.present`; `sigma_kinematic` reads only `Trajectory.pos`.
   Neither reads `.quat`. `detect/events.py`'s own comment confirms v1 "only
-  ever registers R2 and R5" (P2 existence, P4 kinematic) -- exactly the
+  ever registers R1 and R3" (P2 existence, P4 kinematic) -- exactly the
   proposal's stated minimum-viable scope (VITALS_proposal.pdf §15), which
   explicitly defers the relation head and its pose/tracking complexity.
   `Trajectory.quat` is a required dataclass field regardless, so it's
@@ -130,7 +130,7 @@ def _existence_mask(masks, reid_events, T, forgiveness_frames=0, known_occluded_
     RECOVERY evidenced by a reid_event. sigma_existence, calibrated against
     state-space references where `present` structurally never dips, then
     reads that single manufactured False as a genuine existence violation:
-    measured directly, this was the dominant cause of a 4/10 spurious R2
+    measured directly, this was the dominant cause of a 4/10 spurious R1
     firing rate on defect-free episodes that never needed reidentification
     at all (n_reid_events=0). A gap reidentify.py itself never considered
     worth searching for is not evidence the object stopped existing --
@@ -142,7 +142,7 @@ def _existence_mask(masks, reid_events, T, forgiveness_frames=0, known_occluded_
     hardening, 2026-08). This is a SEPARATE, later fix from the
     forgiveness one above -- found via GATE 2's own full sweep, not the
     single-episode organic validation: forgiveness/reid_event closure
-    together still left a ~90% R2 false-positive rate on completely
+    together still left a ~90% R1 false-positive rate on completely
     UNDISTURBED episodes, because a genuinely, correctly occluded object
     (still behind a KNOWN wall, physics correctly never even attempting a
     search -- `n_reid_events=0`) has NO reid_event to close its gap, and
@@ -663,7 +663,7 @@ def reconstruct_trajectory(masks, fps, cam_pos, cam_mat, fovy_deg, width, height
                             plane_z=None, name="ball", planar_motion=True, reid_events=None, T=None,
                             forgiveness_frames=0, known_occluded_frames=None, plane_pieces=None,
                             ballistic=False, object_radius=None, gravity_z=-9.81, size_weight=3.0,
-                            unreliable_prefix_frames=0, piecewise_ballistic=False):
+                            unreliable_prefix_frames=0, piecewise_ballistic=False, with_shape=False):
     """masks: {frame_idx: (H,W) bool}, as produced by segmentation.py /
     reidentify.py -- REAL tracked masks, never ground truth (this module
     has no privileged access, matching AGENT.md 3.1's spirit even though it
@@ -902,7 +902,35 @@ def reconstruct_trajectory(masks, fps, cam_pos, cam_mat, fovy_deg, width, height
 
     present = _existence_mask(masks, reid_events, T, forgiveness_frames=forgiveness_frames,
                                known_occluded_frames=known_occluded_frames)[:, None]
-    return Trajectory(t=t, pos=pos, quat=quat, present=present, names=[name])
+    shape = None
+    if with_shape:
+        # Soft-body scenarios (AGENT.md M9): the pixel-side SHAPE_DESCRIPTORS
+        # (silhouette area in px, principal-axis ratio) straight from the
+        # tracked mask -- the same footing as softbody.attach_shape's
+        # projected-vertex descriptors on the state side (verified to agree
+        # within ~1% on rendered references). NaN wherever the object is
+        # not directly visible: shape, like pos, is unmeasured in a gap.
+        from ..physics.softbody import descriptors_from_mask, SHAPE_DESCRIPTORS
+        shape = np.full((T, 1, len(SHAPE_DESCRIPTORS)), np.nan)
+        # Shape is defined only where the tracker itself would call the
+        # object VISIBLE -- reidentify.py's own rule, a mask above half of
+        # the largest mask seen so far. Found on soft_drop's GATE 2
+        # (2026-09-14): after a planted vanish the tracker keeps returning
+        # a tiny residual mask for a few frames, whose area ratio fired R6
+        # (conservation) 0.17s before existence (R1) could be declared;
+        # a residual below the visibility rule is not a measurement of the
+        # body's size, so it is NaN here, and the existence logic (which
+        # runs on the same rule) owns that gap.
+        max_area = 0.0
+        for i in range(T):
+            m = masks.get(i)
+            if m is None or not m.any():
+                continue
+            area = float(m.sum())
+            max_area = max(max_area, area)
+            if area >= 0.5 * max_area:
+                shape[i, 0] = descriptors_from_mask(m)
+    return Trajectory(t=t, pos=pos, quat=quat, present=present, names=[name], shape=shape)
 
 
 def merge_trajectories(trajs):
@@ -935,4 +963,9 @@ def merge_trajectories(trajs):
     quat = np.concatenate([traj.quat for traj in trajs], axis=1)
     present = np.concatenate([traj.present for traj in trajs], axis=1)
     names = [nm for traj in trajs for nm in traj.names]
-    return Trajectory(t=t0, pos=pos, quat=quat, present=present, names=names)
+    shape = None
+    if any(traj.shape is not None for traj in trajs):
+        S = next(traj.shape.shape[-1] for traj in trajs if traj.shape is not None)
+        shape = np.concatenate([traj.shape if traj.shape is not None
+                                else np.full((traj.T, traj.K, S), np.nan) for traj in trajs], axis=1)
+    return Trajectory(t=t0, pos=pos, quat=quat, present=present, names=names, shape=shape)

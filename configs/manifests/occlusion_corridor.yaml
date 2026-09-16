@@ -20,6 +20,6 @@ seed: 0
 # The ball's only physically-free variable is along-track speed -- isotropic
 # 3D perturbation (ramp_descent's default) also perturbs vertical
 # position/velocity, which a unilateral floor contact resolves as an actual
-# bounce at this lambda, corrupting R5 detection with motion this scenario
+# bounce at this lambda, corrupting R3 detection with motion this scenario
 # never meant to test. See physics/perturb.py::sample_velocity_perturbation.
 perturb_mode: velocity_x_only

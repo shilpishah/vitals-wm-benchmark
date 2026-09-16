@@ -6,8 +6,8 @@
   "lam": 2.0,
   "t_max": 3.966666666666667,
   "thresholds_median": {
-    "R2": 0.0,
-    "R5": 2.851877247905385
+    "R1": 0.0,
+    "R3": 2.851877247905385
   },
   "gate_1a": {
     "false_termination_rate": 0.0,
@@ -25,33 +25,33 @@
     },
     {
       "label": "vanish",
-      "risk_expected": "R2",
+      "risk_expected": "R1",
       "t_star": 1.0,
-      "risk_fired": "R2",
+      "risk_fired": "R1",
       "t_detected": 1.0,
       "censored": false
     },
     {
       "label": "velocity_freeze",
-      "risk_expected": "R5",
+      "risk_expected": "R3",
       "t_star": 1.0,
-      "risk_fired": "R5",
+      "risk_fired": "R3",
       "t_detected": 1.5333333333333332,
       "censored": false
     },
     {
       "label": "duplicate",
-      "risk_expected": "R2",
+      "risk_expected": "R1",
       "t_star": 1.0,
-      "risk_fired": "R2",
+      "risk_fired": "R1",
       "t_detected": 1.0,
       "censored": false
     },
     {
       "label": "jitter sig=0.8",
-      "risk_expected": "R5",
+      "risk_expected": "R3",
       "t_star": 0.0,
-      "risk_fired": "R5",
+      "risk_fired": "R3",
       "t_detected": 0.4,
       "censored": false
     }
@@ -65,8 +65,8 @@
     ],
     "censoring_rate": 0.6125,
     "termination_profile": {
-      "R2": 0.7096774193548387,
-      "R5": 0.2903225806451613
+      "R1": 0.7096774193548387,
+      "R3": 0.2903225806451613
     },
     "kaplan_meier": {
       "t": [
@@ -151,7 +151,7 @@
       },
       {
         "time": 2.5,
-        "risk": "R2",
+        "risk": "R1",
         "censored": false
       },
       {
@@ -166,12 +166,12 @@
       },
       {
         "time": 1.2,
-        "risk": "R2",
+        "risk": "R1",
         "censored": false
       },
       {
         "time": 1.5666666666666667,
-        "risk": "R2",
+        "risk": "R1",
         "censored": false
       },
       {
@@ -196,7 +196,7 @@
       },
       {
         "time": 1.3333333333333333,
-        "risk": "R5",
+        "risk": "R3",
         "censored": false
       },
       {
@@ -206,7 +206,7 @@
       },
       {
         "time": 2.6,
-        "risk": "R2",
+        "risk": "R1",
         "censored": false
       },
       {
@@ -216,7 +216,7 @@
       },
       {
         "time": 1.1333333333333333,
-        "risk": "R2",
+        "risk": "R1",
         "censored": false
       },
       {
@@ -226,12 +226,12 @@
       },
       {
         "time": 1.4,
-        "risk": "R5",
+        "risk": "R3",
         "censored": false
       },
       {
         "time": 0.6,
-        "risk": "R2",
+        "risk": "R1",
         "censored": false
       },
       {
@@ -241,7 +241,7 @@
       },
       {
         "time": 2.533333333333333,
-        "risk": "R2",
+        "risk": "R1",
         "censored": false
       },
       {
@@ -266,7 +266,7 @@
       },
       {
         "time": 1.9,
-        "risk": "R2",
+        "risk": "R1",
         "censored": false
       },
       {
@@ -276,7 +276,7 @@
       },
       {
         "time": 0.9,
-        "risk": "R2",
+        "risk": "R1",
         "censored": false
       },
       {
@@ -296,17 +296,17 @@
       },
       {
         "time": 1.3333333333333333,
-        "risk": "R5",
+        "risk": "R3",
         "censored": false
       },
       {
         "time": 1.1,
-        "risk": "R2",
+        "risk": "R1",
         "censored": false
       },
       {
         "time": 0.8,
-        "risk": "R2",
+        "risk": "R1",
         "censored": false
       },
       {
@@ -316,7 +316,7 @@
       },
       {
         "time": 1.4,
-        "risk": "R5",
+        "risk": "R3",
         "censored": false
       },
       {
@@ -336,7 +336,7 @@
       },
       {
         "time": 1.4,
-        "risk": "R5",
+        "risk": "R3",
         "censored": false
       },
       {
@@ -346,22 +346,22 @@
       },
       {
         "time": 1.4666666666666666,
-        "risk": "R5",
+        "risk": "R3",
         "censored": false
       },
       {
         "time": 1.8,
-        "risk": "R5",
+        "risk": "R3",
         "censored": false
       },
       {
         "time": 2.1333333333333333,
-        "risk": "R5",
+        "risk": "R3",
         "censored": false
       },
       {
         "time": 1.1,
-        "risk": "R2",
+        "risk": "R1",
         "censored": false
       },
       {
@@ -371,12 +371,12 @@
       },
       {
         "time": 1.8,
-        "risk": "R2",
+        "risk": "R1",
         "censored": false
       },
       {
         "time": 2.2333333333333334,
-        "risk": "R2",
+        "risk": "R1",
         "censored": false
       },
       {
@@ -396,7 +396,7 @@
       },
       {
         "time": 1.7333333333333334,
-        "risk": "R2",
+        "risk": "R1",
         "censored": false
       },
       {
@@ -411,7 +411,7 @@
       },
       {
         "time": 1.7333333333333334,
-        "risk": "R2",
+        "risk": "R1",
         "censored": false
       },
       {
@@ -436,7 +436,7 @@
       },
       {
         "time": 2.3666666666666667,
-        "risk": "R2",
+        "risk": "R1",
         "censored": false
       },
       {
@@ -451,7 +451,7 @@
       },
       {
         "time": 1.5666666666666667,
-        "risk": "R5",
+        "risk": "R3",
         "censored": false
       },
       {
@@ -471,7 +471,7 @@
       },
       {
         "time": 1.1666666666666667,
-        "risk": "R2",
+        "risk": "R1",
         "censored": false
       },
       {
@@ -496,12 +496,12 @@
       },
       {
         "time": 2.5,
-        "risk": "R2",
+        "risk": "R1",
         "censored": false
       },
       {
         "time": 2.6,
-        "risk": "R2",
+        "risk": "R1",
         "censored": false
       },
       {
@@ -516,7 +516,7 @@
       },
       {
         "time": 2.3666666666666667,
-        "risk": "R2",
+        "risk": "R1",
         "censored": false
       },
       {
@@ -531,7 +531,7 @@
       },
       {
         "time": 1.4666666666666666,
-        "risk": "R2",
+        "risk": "R1",
         "censored": false
       },
       {

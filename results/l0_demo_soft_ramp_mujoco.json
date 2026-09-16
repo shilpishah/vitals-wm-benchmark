@@ -1,0 +1,603 @@
+{
+  "scenario": "soft_ramp",
+  "target_property": "P4",
+  "backend": "mujoco",
+  "M": 100,
+  "lam": 1.0,
+  "t_max": 5.966666666666667,
+  "thresholds_median": {
+    "R1": 0.0,
+    "R3": 5.0909273963659745,
+    "R6": 2.7551218381197558,
+    "R7": 4.505375612401805
+  },
+  "gate_1a": {
+    "false_termination_rate": 0.0,
+    "target_alpha": 0.01,
+    "passed": true
+  },
+  "gate_1b": [
+    {
+      "label": "null",
+      "risk_expected": null,
+      "t_star": null,
+      "risk_fired": null,
+      "t_detected": null,
+      "censored": true
+    },
+    {
+      "label": "vanish",
+      "risk_expected": "R1",
+      "t_star": 1.5,
+      "risk_fired": "R1",
+      "t_detected": 1.5,
+      "censored": false
+    },
+    {
+      "label": "wrong_gravity",
+      "risk_expected": "R3",
+      "t_star": 0.0,
+      "risk_fired": "R3",
+      "t_detected": 0.7666666666666666,
+      "censored": false
+    },
+    {
+      "label": "velocity_freeze",
+      "risk_expected": "R3",
+      "t_star": 0.25,
+      "risk_fired": "R3",
+      "t_detected": 0.6333333333333333,
+      "censored": false
+    },
+    {
+      "label": "drift",
+      "risk_expected": "R3",
+      "t_star": 1.5,
+      "risk_fired": "R3",
+      "t_detected": 1.9666666666666666,
+      "censored": false
+    },
+    {
+      "label": "wrong_stiffness",
+      "risk_expected": "R6",
+      "t_star": 0.0,
+      "risk_fired": "R7",
+      "t_detected": 3.8333333333333335,
+      "censored": false
+    },
+    {
+      "label": "frozen_deformation",
+      "risk_expected": "R7",
+      "t_star": 0.0,
+      "risk_fired": null,
+      "t_detected": null,
+      "censored": true
+    },
+    {
+      "label": "volume_leak",
+      "risk_expected": "R6",
+      "t_star": 1.5,
+      "risk_fired": "R6",
+      "t_detected": 1.7666666666666666,
+      "censored": false
+    }
+  ],
+  "survival": {
+    "n": 80,
+    "vi50": 4.033333333333333,
+    "vi50_ci95": [
+      2.8333333333333335,
+      5.566666666666666
+    ],
+    "censoring_rate": 0.4125,
+    "termination_profile": {
+      "R3": 0.3829787234042553,
+      "R6": 0.46808510638297873,
+      "R7": 0.14893617021276595
+    },
+    "kaplan_meier": {
+      "t": [
+        0.0,
+        0.7666666666666666,
+        0.7666666666666666,
+        0.7666666666666666,
+        0.7666666666666666,
+        0.7666666666666666,
+        0.7666666666666666,
+        0.7666666666666666,
+        0.7666666666666666,
+        0.7666666666666666,
+        0.7666666666666666,
+        0.7666666666666666,
+        0.7666666666666666,
+        0.7666666666666666,
+        0.7666666666666666,
+        0.7666666666666666,
+        0.7666666666666666,
+        0.7666666666666666,
+        0.8,
+        1.1,
+        1.4333333333333333,
+        1.6333333333333333,
+        1.8666666666666667,
+        1.9,
+        1.9666666666666666,
+        2.0666666666666664,
+        2.0666666666666664,
+        2.466666666666667,
+        2.6,
+        2.8,
+        2.8333333333333335,
+        2.8666666666666667,
+        3.1333333333333333,
+        3.533333333333333,
+        3.5666666666666664,
+        3.7333333333333334,
+        3.8,
+        3.8333333333333335,
+        3.8666666666666667,
+        4.0,
+        4.033333333333333,
+        4.033333333333333,
+        4.133333333333333,
+        4.166666666666667,
+        4.366666666666666,
+        5.533333333333333,
+        5.566666666666666,
+        5.7
+      ],
+      "S": [
+        1.0,
+        0.9875,
+        0.9750000000000001,
+        0.9625000000000001,
+        0.9500000000000002,
+        0.9375000000000001,
+        0.9250000000000002,
+        0.9125000000000002,
+        0.9000000000000001,
+        0.8875000000000002,
+        0.8750000000000002,
+        0.8625000000000003,
+        0.8500000000000003,
+        0.8375000000000004,
+        0.8250000000000003,
+        0.8125000000000003,
+        0.8000000000000004,
+        0.7875000000000004,
+        0.7750000000000005,
+        0.7625000000000005,
+        0.7500000000000004,
+        0.7375000000000004,
+        0.7250000000000004,
+        0.7125000000000004,
+        0.7000000000000003,
+        0.6875000000000002,
+        0.6750000000000003,
+        0.6625000000000003,
+        0.6500000000000004,
+        0.6375000000000003,
+        0.6250000000000002,
+        0.6125000000000002,
+        0.6000000000000001,
+        0.5875,
+        0.575,
+        0.5625,
+        0.5499999999999999,
+        0.5375,
+        0.5249999999999999,
+        0.5124999999999998,
+        0.49999999999999983,
+        0.4874999999999998,
+        0.4749999999999998,
+        0.46249999999999986,
+        0.4499999999999999,
+        0.4374999999999999,
+        0.4249999999999999,
+        0.41249999999999987
+      ]
+    },
+    "events": [
+      {
+        "time": 5.966666666666667,
+        "risk": null,
+        "censored": true
+      },
+      {
+        "time": 0.7666666666666666,
+        "risk": "R3",
+        "censored": false
+      },
+      {
+        "time": 4.033333333333333,
+        "risk": "R6",
+        "censored": false
+      },
+      {
+        "time": 5.966666666666667,
+        "risk": null,
+        "censored": true
+      },
+      {
+        "time": 0.7666666666666666,
+        "risk": "R3",
+        "censored": false
+      },
+      {
+        "time": 2.0666666666666664,
+        "risk": "R6",
+        "censored": false
+      },
+      {
+        "time": 2.6,
+        "risk": "R6",
+        "censored": false
+      },
+      {
+        "time": 5.966666666666667,
+        "risk": null,
+        "censored": true
+      },
+      {
+        "time": 0.7666666666666666,
+        "risk": "R3",
+        "censored": false
+      },
+      {
+        "time": 4.366666666666666,
+        "risk": "R7",
+        "censored": false
+      },
+      {
+        "time": 5.966666666666667,
+        "risk": null,
+        "censored": true
+      },
+      {
+        "time": 5.966666666666667,
+        "risk": null,
+        "censored": true
+      },
+      {
+        "time": 5.966666666666667,
+        "risk": null,
+        "censored": true
+      },
+      {
+        "time": 4.133333333333333,
+        "risk": "R6",
+        "censored": false
+      },
+      {
+        "time": 5.966666666666667,
+        "risk": null,
+        "censored": true
+      },
+      {
+        "time": 1.9666666666666666,
+        "risk": "R6",
+        "censored": false
+      },
+      {
+        "time": 5.966666666666667,
+        "risk": null,
+        "censored": true
+      },
+      {
+        "time": 5.966666666666667,
+        "risk": null,
+        "censored": true
+      },
+      {
+        "time": 1.1,
+        "risk": "R6",
+        "censored": false
+      },
+      {
+        "time": 0.7666666666666666,
+        "risk": "R3",
+        "censored": false
+      },
+      {
+        "time": 4.033333333333333,
+        "risk": "R6",
+        "censored": false
+      },
+      {
+        "time": 5.966666666666667,
+        "risk": null,
+        "censored": true
+      },
+      {
+        "time": 3.5666666666666664,
+        "risk": "R7",
+        "censored": false
+      },
+      {
+        "time": 5.966666666666667,
+        "risk": null,
+        "censored": true
+      },
+      {
+        "time": 3.8666666666666667,
+        "risk": "R7",
+        "censored": false
+      },
+      {
+        "time": 3.1333333333333333,
+        "risk": "R6",
+        "censored": false
+      },
+      {
+        "time": 5.966666666666667,
+        "risk": null,
+        "censored": true
+      },
+      {
+        "time": 1.6333333333333333,
+        "risk": "R6",
+        "censored": false
+      },
+      {
+        "time": 0.7666666666666666,
+        "risk": "R3",
+        "censored": false
+      },
+      {
+        "time": 0.7666666666666666,
+        "risk": "R3",
+        "censored": false
+      },
+      {
+        "time": 5.966666666666667,
+        "risk": null,
+        "censored": true
+      },
+      {
+        "time": 5.966666666666667,
+        "risk": null,
+        "censored": true
+      },
+      {
+        "time": 1.9,
+        "risk": "R6",
+        "censored": false
+      },
+      {
+        "time": 1.4333333333333333,
+        "risk": "R6",
+        "censored": false
+      },
+      {
+        "time": 0.7666666666666666,
+        "risk": "R3",
+        "censored": false
+      },
+      {
+        "time": 5.966666666666667,
+        "risk": null,
+        "censored": true
+      },
+      {
+        "time": 0.7666666666666666,
+        "risk": "R3",
+        "censored": false
+      },
+      {
+        "time": 5.966666666666667,
+        "risk": null,
+        "censored": true
+      },
+      {
+        "time": 0.7666666666666666,
+        "risk": "R3",
+        "censored": false
+      },
+      {
+        "time": 5.966666666666667,
+        "risk": null,
+        "censored": true
+      },
+      {
+        "time": 5.966666666666667,
+        "risk": null,
+        "censored": true
+      },
+      {
+        "time": 5.7,
+        "risk": "R7",
+        "censored": false
+      },
+      {
+        "time": 0.8,
+        "risk": "R3",
+        "censored": false
+      },
+      {
+        "time": 5.966666666666667,
+        "risk": null,
+        "censored": true
+      },
+      {
+        "time": 1.8666666666666667,
+        "risk": "R6",
+        "censored": false
+      },
+      {
+        "time": 5.966666666666667,
+        "risk": null,
+        "censored": true
+      },
+      {
+        "time": 2.8666666666666667,
+        "risk": "R6",
+        "censored": false
+      },
+      {
+        "time": 3.533333333333333,
+        "risk": "R6",
+        "censored": false
+      },
+      {
+        "time": 5.966666666666667,
+        "risk": null,
+        "censored": true
+      },
+      {
+        "time": 5.966666666666667,
+        "risk": null,
+        "censored": true
+      },
+      {
+        "time": 0.7666666666666666,
+        "risk": "R3",
+        "censored": false
+      },
+      {
+        "time": 2.8,
+        "risk": "R6",
+        "censored": false
+      },
+      {
+        "time": 0.7666666666666666,
+        "risk": "R3",
+        "censored": false
+      },
+      {
+        "time": 5.966666666666667,
+        "risk": null,
+        "censored": true
+      },
+      {
+        "time": 2.8333333333333335,
+        "risk": "R6",
+        "censored": false
+      },
+      {
+        "time": 0.7666666666666666,
+        "risk": "R3",
+        "censored": false
+      },
+      {
+        "time": 5.966666666666667,
+        "risk": null,
+        "censored": true
+      },
+      {
+        "time": 5.966666666666667,
+        "risk": null,
+        "censored": true
+      },
+      {
+        "time": 0.7666666666666666,
+        "risk": "R3",
+        "censored": false
+      },
+      {
+        "time": 3.8,
+        "risk": "R6",
+        "censored": false
+      },
+      {
+        "time": 5.966666666666667,
+        "risk": null,
+        "censored": true
+      },
+      {
+        "time": 0.7666666666666666,
+        "risk": "R3",
+        "censored": false
+      },
+      {
+        "time": 5.533333333333333,
+        "risk": "R7",
+        "censored": false
+      },
+      {
+        "time": 5.966666666666667,
+        "risk": null,
+        "censored": true
+      },
+      {
+        "time": 5.966666666666667,
+        "risk": null,
+        "censored": true
+      },
+      {
+        "time": 0.7666666666666666,
+        "risk": "R3",
+        "censored": false
+      },
+      {
+        "time": 2.0666666666666664,
+        "risk": "R6",
+        "censored": false
+      },
+      {
+        "time": 0.7666666666666666,
+        "risk": "R3",
+        "censored": false
+      },
+      {
+        "time": 0.7666666666666666,
+        "risk": "R3",
+        "censored": false
+      },
+      {
+        "time": 3.8333333333333335,
+        "risk": "R7",
+        "censored": false
+      },
+      {
+        "time": 5.566666666666666,
+        "risk": "R7",
+        "censored": false
+      },
+      {
+        "time": 4.0,
+        "risk": "R6",
+        "censored": false
+      },
+      {
+        "time": 4.166666666666667,
+        "risk": "R6",
+        "censored": false
+      },
+      {
+        "time": 5.966666666666667,
+        "risk": null,
+        "censored": true
+      },
+      {
+        "time": 5.966666666666667,
+        "risk": null,
+        "censored": true
+      },
+      {
+        "time": 3.7333333333333334,
+        "risk": "R6",
+        "censored": false
+      },
+      {
+        "time": 5.966666666666667,
+        "risk": null,
+        "censored": true
+      },
+      {
+        "time": 5.966666666666667,
+        "risk": null,
+        "censored": true
+      },
+      {
+        "time": 2.466666666666667,
+        "risk": "R6",
+        "censored": false
+      },
+      {
+        "time": 5.966666666666667,
+        "risk": null,
+        "censored": true
+      }
+    ]
+  }
+}

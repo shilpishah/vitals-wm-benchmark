@@ -1,0 +1,27 @@
+# Declarative EpisodeSpec -- the corpus regenerates from this alone.
+# AGENT.md M9.1 (2026-09-14): the soft-body scenario with a scorable
+# post-contact TRAJECTORY -- ramp_descent's incline with a deformable body
+# (volumetric elasticity, young 1000) released 0.25 m above the surface;
+# it lands, squashes, rolls the ramp and ~3 m of floor over 6 s.
+# target_property: P4 (dynamics), like ramp_descent -- R3 on the centroid
+# (x and z, the ramp's own axes restriction) is the primary channel, with
+# R6 conservation / R7 shape scored alongside as on soft_drop. Reference
+# ensemble: INITIAL CONDITIONS ONLY (M9 decision 5); perturb_mode
+# velocity_x_only (measured 2026-09-14 on 40-reference bands: the full
+# isotropic Sigma jostles the release point, spreading the first-contact
+# timing so widely that the shape band absorbed a 2.5x stiffness error --
+# theta_R6 4.2 vs 2.0 with velocity-only -- while x-velocity alone keeps
+# the impact aligned and wrong_stiffness fires R6 at 1.3 s; frozen_
+# deformation is below the band either way, recorded as this scene's
+# R7 floor). The material is part of s_0. n_reference 100: three-channel
+# false-termination budget. GATE 1/2 floors re-measured, never inherited.
+name: soft_ramp
+scene: scenes/soft_ramp.xml
+target_property: P4
+band: I
+lam: 1.0
+n_reference: 100
+horizon_s: 6.0
+fps: 30
+seed: 0
+perturb_mode: velocity_x_only

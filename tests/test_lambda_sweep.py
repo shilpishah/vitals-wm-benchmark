@@ -18,10 +18,10 @@ ROLL = make_backend("synthetic", scene=SPEC.scene)
 
 
 def test_calibrate_returns_finite_thresholds_for_both_channels():
-    refs, stats, thetas, dt, t_max = sweep.calibrate(ROLL, SPEC)
+    refs, stats, thetas, stats_video, thetas_video, dt, t_max = sweep.calibrate(ROLL, SPEC)
     assert len(refs) == SPEC.n_reference
-    assert set(thetas) == {"R2", "R5"}
-    assert math.isfinite(float(thetas["R2"][0]))
+    assert set(thetas) == {"R1", "R3"}
+    assert math.isfinite(float(thetas["R1"][0]))
     assert t_max > 0
 
 
@@ -35,7 +35,7 @@ def test_build_demo_cases_occlusion_corridor_uses_duplicate_not_wrong_gravity():
 
 
 def test_gate1a_and_gate1b_run_end_to_end_small_n():
-    refs, stats, thetas, dt, t_max = sweep.calibrate(ROLL, SPEC)
+    refs, stats, thetas, stats_video, thetas_video, dt, t_max = sweep.calibrate(ROLL, SPEC)
     gate_1a, held_out = sweep.run_gate1a(ROLL, SPEC, refs, stats, thetas, dt, t_max, n=8)
     assert 0.0 <= gate_1a["false_termination_rate"] <= 1.0
     assert len(held_out) == 8
@@ -49,7 +49,7 @@ def test_gate1a_and_gate1b_run_end_to_end_small_n():
 
 
 def test_truth_and_baseline_populations_produce_valid_events():
-    refs, stats, thetas, dt, t_max = sweep.calibrate(ROLL, SPEC)
+    refs, stats, thetas, stats_video, thetas_video, dt, t_max = sweep.calibrate(ROLL, SPEC)
     truth = sweep.truth_population(ROLL, SPEC, refs, stats, thetas, dt, t_max, n=6)
     assert len(truth) == 6
     assert all(e.censored or e.time <= t_max + 1e-9 for e in truth)
@@ -85,7 +85,7 @@ def test_real_model_population_reuses_cached_trajectories_no_regen():
     from vitals.adapters.video_utils import save_trajectory
     from vitals.types import Trajectory
 
-    refs, stats, thetas, dt, t_max = sweep.calibrate(ROLL, SPEC)
+    refs, stats, thetas, stats_video, thetas_video, dt, t_max = sweep.calibrate(ROLL, SPEC)
     n_short = 20   # shorter than the reference ensemble's own horizon
     with tempfile.TemporaryDirectory() as tmp:
         cache_dir = pathlib.Path(tmp) / "occlusion_corridor_fakemodel"

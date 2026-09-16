@@ -1,0 +1,71 @@
+<mujoco model="occlusion_reemergence">
+  <!-- Z-up, flat ground. 2026-09-11, scenario scaling ("start with occlusion
+       re-emergence and stacking"): the entity-persistence test that
+       occlusion_corridor only half-asks. That scene's own lambda (6.0) is
+       tuned so the reference ensemble SPLITS three ways (stop short /
+       stop behind / re-emerge), which makes "the ball never came back out"
+       ambiguous -- it is a legitimate physical outcome there. Here the
+       ensemble is TIGHT (manifest lam=2.0, velocity_x_only) and the launch
+       speed is chosen so EVERY reference rolls fully behind the wall and
+       re-emerges on the far side inside the real-model scoring window
+       (30 prefix + 60 continuation frames = 3.0s): a candidate whose ball
+       does not re-emerge is an unambiguous existence failure (R1), and one
+       that re-emerges at the wrong time or place is a kinematic one (R3).
+
+       Geometry is occlusion_corridor.xml's, unchanged except the wall:
+       same floor friction (so the same measured rolling deceleration,
+       scene_geometry.OCCLUSION_CORRIDOR_DECELERATION, applies to the
+       motion prior's occluder-aware search), same ball, same push
+       keyframe convention. The wall is 3.5m long along x (half-size 1.75
+       vs 0.75), spanning x in [4.90, 8.40], so the ball enters full
+       occlusion after the 1.0s prefix has been observed fully visible and
+       is hidden for ~1.15s. Tuned by simulation over the lam=2.0 ensemble
+       (2026-09-11): x(1.0s) max 4.75 (< 4.90-0.15 margin holds), enters
+       1.18+-0.04s, exits 2.33+-0.09s (latest 2.50s), 30/30 re-emerge,
+       still rolling at 1.25 m/s at t=3.0s. The launch speed is NOT free:
+       below ~5 m/s the ball is in a slip-dominated regime, decelerates
+       hard and stops behind the wall (4.6 m/s: x(3s)=5.9); at 6 m/s it
+       rolls cleanly (x(3s)=9.4). The EFFECTIVE camera-relative occlusion
+       span is measured, not read off this geometry (scripts/
+       measure_occluder_visibility.py) -- scene_geometry.OCCLUSION_
+       REEMERGENCE_WALL_BOUNDS is the single source of that number. -->
+  <option timestep="0.002" gravity="0 0 -9.81"/>
+  <visual>
+    <global offwidth="1280" offheight="720"/>
+  </visual>
+
+  <default>
+    <geom friction="0.6 0.005 0.03" solref="0.01 1"/>
+  </default>
+
+  <worldbody>
+    <light diffuse="0.8 0.8 0.8" pos="4 0 4" dir="0 0 -1"/>
+
+    <geom name="floor" type="plane" size="9 3 0.1" pos="6 0 0" rgba="0.5 0.5 0.5 1"/>
+
+    <!-- Occluding wall, non-colliding, fully opaque (alpha MUST stay 1 --
+         see occlusion_corridor.xml's own comment on alpha-blended ghosts). -->
+    <geom name="wall" type="box" size="1.75 0.6 0.5" pos="6.65 0 0.5"
+          contype="0" conaffinity="0" rgba="0.3 0.3 0.3 1"/>
+    <!-- Same cosmetic "lit opening" decal as occlusion_corridor.xml (a
+         plain solid box reads as a dead end to a generative model), scaled
+         to the longer wall; non-colliding, in front of the near face only. -->
+    <geom name="wall_opening" type="box" size="1.55 0.02 0.35" pos="6.65 0.61 0.5"
+          contype="0" conaffinity="0" rgba="0.95 0.95 0.75 1"/>
+
+    <body name="ball" pos="0 0 0.15">
+      <freejoint/>
+      <geom name="ball_geom" type="sphere" size="0.15" mass="0.5" rgba="0.8 0.1 0.1 1"
+            condim="6"/>
+    </body>
+  </worldbody>
+
+  <keyframe>
+    <!-- Baseline s_0: ball at rest on the floor at x=0 with a push down the
+         corridor. Speed chosen by simulation (see manifest) so that with the
+         measured deceleration the ball is fully visible for the whole 1.0s
+         prefix, fully hidden for ~1s, and back in view before t=3.0s in
+         every lam=2.0 reference. -->
+    <key name="push" qpos="0 0 0.15 1 0 0 0" qvel="6.0 0 0 0 0 0"/>
+  </keyframe>
+</mujoco>

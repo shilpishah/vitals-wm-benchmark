@@ -25,8 +25,8 @@ def _refs():
 
 
 def _thetas(refs):
-    return {"R2": estimate_threshold(refs, sigma_existence, alpha=0.01),
-            "R5": estimate_threshold(refs, sigma_kinematic, alpha=0.01)}
+    return {"R1": estimate_threshold(refs, sigma_existence, alpha=0.01),
+            "R3": estimate_threshold(refs, sigma_kinematic, alpha=0.01)}
 
 
 def test_perturbation_scales_with_lambda():
@@ -48,7 +48,7 @@ def test_vanish_mutant_flips_present_and_keeps_K():
     i = int(1.0 / traj.dt)
     assert not m.traj.present[i:, 0].any()
     assert m.traj.K == traj.K
-    assert m.risk_expected == "R2"
+    assert m.risk_expected == "R1"
 
 
 def test_duplicate_changes_K():
@@ -63,30 +63,30 @@ def test_threshold_null_false_positive_rate_near_alpha():
     held_out = [make_backend("synthetic")(SPEC, 9000 + i) for i in range(30)]
     events = []
     for h in held_out:
-        sigmas = {"R2": sigma_existence(h, refs), "R5": sigma_kinematic(h, refs)}
+        sigmas = {"R1": sigma_existence(h, refs), "R3": sigma_kinematic(h, refs)}
         events.append(extract_event(sigmas, thetas, refs[0].dt, float(refs[0].t[-1])))
     fp_rate = sum(not e.censored for e in events) / len(events)
     assert fp_rate < 5 * 0.01 + 0.1   # loose bound; GATE 1a in run_l0_demo.py is the real check
 
 
-def test_vanish_fires_on_r2_not_r5():
+def test_vanish_fires_on_r1_not_r3():
     refs = _refs()
     thetas = _thetas(refs)
     base = make_backend("synthetic")(SPEC, 555)
     m = mut.vanish(base, t_star=1.0)
-    sigmas = {"R2": sigma_existence(m.traj, refs), "R5": sigma_kinematic(m.traj, refs)}
+    sigmas = {"R1": sigma_existence(m.traj, refs), "R3": sigma_kinematic(m.traj, refs)}
     ev = extract_event(sigmas, thetas, base.dt, float(base.t[-1]))
-    assert ev.risk == "R2"
+    assert ev.risk == "R1"
 
 
-def test_velocity_freeze_fires_on_r5():
+def test_velocity_freeze_fires_on_r3():
     refs = _refs()
     thetas = _thetas(refs)
     base = make_backend("synthetic")(SPEC, 777)
     m = mut.velocity_freeze(base, t_star=0.6)   # while the ball is still on the ramp
-    sigmas = {"R2": sigma_existence(m.traj, refs), "R5": sigma_kinematic(m.traj, refs)}
+    sigmas = {"R1": sigma_existence(m.traj, refs), "R3": sigma_kinematic(m.traj, refs)}
     ev = extract_event(sigmas, thetas, base.dt, float(base.t[-1]))
-    assert ev.risk == "R5"
+    assert ev.risk == "R3"
 
 
 def _single_obj_traj(pos_over_time, T=30, dt=1.0 / 30):
@@ -158,7 +158,7 @@ def test_sigma_interpenetration_flags_planted_overlap():
     refs = _interpen_refs()
     base = _two_obj_traj(sep=2.0)
     m = mut.teleport(base, t_star=0.5, obj=0, target=1)
-    assert m.risk_expected == "R4"
+    assert m.risk_expected == "R2"
     sigma = sigma_interpenetration(m.traj, refs)
     i = int(0.5 / base.dt)
     assert np.nanmax(sigma[:i]) < 1.5, "pre-teleport separation matches the reference typical distance -- ratio should sit near 1.0, not flag"
@@ -166,7 +166,7 @@ def test_sigma_interpenetration_flags_planted_overlap():
 
 
 def test_sigma_interpenetration_nan_when_target_absent():
-    """An existence failure (target object gone) is R2's job, not R4's --
+    """An existence failure (target object gone) is R1's job, not R2's --
     sigma_interpenetration must report NaN (undefined), never a large
     positive value, when either tracked object is absent."""
     refs = _interpen_refs()
@@ -174,7 +174,7 @@ def test_sigma_interpenetration_nan_when_target_absent():
     present1[10:] = False
     cand = _two_obj_traj(sep=2.0, present1=present1)
     sigma = sigma_interpenetration(cand, refs)
-    assert np.all(np.isnan(sigma[10:])), "target absent -- must be NaN (undefined), not a manufactured R4 signal"
+    assert np.all(np.isnan(sigma[10:])), "target absent -- must be NaN (undefined), not a manufactured R2 signal"
     assert not np.isnan(sigma[5]), "target still present here -- should be a real, defined value"
 
 
@@ -237,14 +237,14 @@ def test_sigma_existence_obj_restriction_fixes_the_k_mismatch_bug():
 
 
 def test_kaplan_meier_is_monotone_nonincreasing():
-    events = [Event(1.0, "R2", False), Event(2.0, "R5", False), Event(3.0, None, True)]
+    events = [Event(1.0, "R1", False), Event(2.0, "R3", False), Event(3.0, None, True)]
     _, surv = kaplan_meier(events)
     assert np.all(np.diff(surv) <= 1e-12)
 
 
 def test_validity_interval_and_termination_profile():
-    events = [Event(1.0, "R2", False), Event(1.0, "R2", False),
-              Event(5.0, "R5", False), Event(6.0, None, True)]
+    events = [Event(1.0, "R1", False), Event(1.0, "R1", False),
+              Event(5.0, "R3", False), Event(6.0, None, True)]
     assert validity_interval(events, 0.5) > 0
     prof = termination_profile(events)
     assert abs(sum(prof.values()) - 1.0) < 1e-9
@@ -258,8 +258,8 @@ def test_bootstrap_vi_delta_separates_clearly_different_populations():
     much longer every time -- and comparing a population against ITSELF
     must center on zero."""
     from vitals.stats.survival import bootstrap_vi_delta
-    early = [Event(1.0, "R2", False) for _ in range(20)]
-    late = [Event(9.0, "R2", False) for _ in range(20)]
+    early = [Event(1.0, "R1", False) for _ in range(20)]
+    late = [Event(9.0, "R1", False) for _ in range(20)]
 
     point, lo, hi = bootstrap_vi_delta(early, late, q=0.5, n_boot=200, seed=0)
     assert point < 0, "early-terminating population should show a negative VI delta vs the late one"

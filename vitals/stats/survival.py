@@ -37,6 +37,54 @@ def validity_interval(events, q=0.5):
     return float(grid[below[0]]) if len(below) else float("inf")
 
 
+def survival_at(events, times):
+    """S(t) read off the Kaplan-Meier step function at each requested
+    time -- the fraction of episodes still valid at a fixed horizon.
+    Unlike VI_q it does not collapse when most episodes fail at the same
+    instant: two models that both have VI_50 at the detection floor can
+    still differ in S(1.5s), S(2.0s), S(3.0s). Returns a list of floats."""
+    grid, surv = kaplan_meier(events)
+    out = []
+    for t in np.atleast_1d(times):
+        idx = np.searchsorted(grid, t, side="right") - 1
+        out.append(float(surv[max(idx, 0)]))
+    return out
+
+
+def restricted_mean_validity(events, t_max):
+    """RMVT: the area under the Kaplan-Meier curve from 0 to t_max -- the
+    expected validity time within the observation window (survival
+    analysis' restricted mean survival time, Royston & Parmar 2013).
+    Added 2026-09-12 for the VI_50 floor problem: when nearly every
+    episode fails within a frame or two of the prefix ending, VI_50 sits
+    at the floor (~1.03s) with a POINT confidence interval and cannot
+    rank models, but the survival curves still differ in how fast they
+    fall and how many episodes survive to the end -- RMVT integrates all
+    of that into one number in seconds, bounded by t_max. It is the
+    quantity to rank on at this resolution; VI_50 stays reported as the
+    pre-registered primary."""
+    grid, surv = kaplan_meier(events)
+    grid = np.append(grid, t_max)
+    surv = np.append(surv, surv[-1])
+    keep = grid <= t_max
+    g, s = grid[keep], surv[keep]
+    if g[-1] < t_max:
+        g = np.append(g, t_max); s = np.append(s, s[-1])
+    return float(np.sum(np.diff(g) * s[:-1]))
+
+
+def bootstrap_rmvt(events, t_max, n_boot=1000, seed=0):
+    """Percentile CI on RMVT. Resample episodes, never rollouts (§3.10).
+    Unlike bootstrap_vi there is no infinite case to drop: RMVT is always
+    finite on [0, t_max]."""
+    rng = np.random.default_rng(seed)
+    vals = []
+    for _ in range(n_boot):
+        idx = rng.integers(0, len(events), len(events))
+        vals.append(restricted_mean_validity([events[i] for i in idx], t_max))
+    return (float(np.percentile(vals, 2.5)), float(np.percentile(vals, 97.5)))
+
+
 def aalen_johansen(events, risks=None):
     """Cause-specific cumulative incidence. Returns (t_grid, {risk: F_k})."""
     times, rk, obs = _tabulate(events)

@@ -1,0 +1,89 @@
+<mujoco model="billiards">
+  <!-- Z-up. Flat ground. P4 (dynamics) -- a chained, 3-body extension of
+       collision.xml's own single pairwise-impact scene (2026-08): cue
+       ball strikes ball A, and ball A's OWN post-impact motion then
+       carries it into ball B -- a genuinely different, harder regime
+       (compounding momentum transfer across two sequential impacts, not
+       one) than collision.xml's single hit, per AGENT.md's own scoping
+       note on why this is the natural next step from that scene rather
+       than a cosmetic variant of it.
+
+       v1 scope, decided directly (2026-09, billiards/multi-collision
+       scoping): reuses collision.xml's own ball geometry/friction/
+       restitution UNCHANGED (same mass, radius, friction triple,
+       solref) -- the new thing here is scene LAYOUT (three bodies, two
+       sequential impacts), not new physics parameters. Unlike collision.
+       xml's own deliberate "only the cue ball is scored" v1 limit, this
+       manifest registers track_all_objects: true (EpisodeSpec), so a
+       real video model's own reconstruction tracks all three bodies --
+       scoring only the cue ball here would make the entire point of
+       this scene (does momentum correctly propagate through the chain)
+       unmeasurable for real models, unlike collision.xml where the cue
+       ball alone was already a complete v1 test.
+
+       contype/conaffinity: left at MuJoCo's own default (1/1), same
+       reasoning as collision.xml -- the whole point IS the sequence of
+       impacts, no bitmask tricks needed. -->
+  <option timestep="0.002" gravity="0 0 -9.81"/>
+  <visual>
+    <global offwidth="1280" offheight="720"/>
+  </visual>
+
+  <default>
+    <geom friction="0.6 0.005 0.03" solref="0.01 1"/>
+  </default>
+
+  <worldbody>
+    <light diffuse="0.8 0.8 0.8" pos="6 0 4" dir="0 0 -1"/>
+
+    <geom name="floor" type="plane" size="12 3 0.1" pos="6 0 0" rgba="0.5 0.5 0.5 1"/>
+
+    <!-- Cue ball -- body index 0 (obj_id=1, "object0"), launched. -->
+    <body name="ball" pos="0 0 0.15">
+      <freejoint/>
+      <geom name="ball_geom" type="sphere" size="0.15" mass="0.5" rgba="0.8 0.1 0.1 1"
+            condim="6"/>
+    </body>
+
+    <!-- Ball A -- body index 1 (obj_id=2, "object1"), the FIRST impact's
+         own target. Starts at rest, directly in the cue ball's path;
+         its OWN post-impact motion is what carries it into ball B --
+         this is the chain, not two independent collisions. -->
+    <body name="target_a" pos="3 0 0.15">
+      <freejoint/>
+      <geom name="target_a_geom" type="sphere" size="0.15" mass="0.5" rgba="0.1 0.3 0.8 1"
+            condim="6"/>
+    </body>
+
+    <!-- Ball B -- body index 2 (obj_id=3, "object2"), the SECOND impact's
+         own target. Spacing (2.0m from ball A) and the cue's own launch
+         speed below were BOTH found by a real MuJoCo rollout sweep, not
+         assumed: at collision.xml's own original 3.5 m/s, ball A's
+         post-impact speed is far too low (this friction/mass/solref
+         combination dissipates far more energy on a rolling-sphere
+         impact than a naive elastic-collision estimate would suggest --
+         measured directly: ball A traveled only 0.14m total before
+         stopping, nowhere near a 2m gap). A velocity sweep (3.5-30 m/s)
+         found 12 m/s reaches a local maximum of ball A's own post-impact
+         travel (~3.26m, comfortable margin over the 2m gap), and is
+         robust across a wide neighborhood (9.5-14 m/s all reliably
+         complete the second impact, 0.54-0.87s after the first) --
+         chosen for margin against Sigma's own per-episode perturbation,
+         not picked at the edge of what happens to work once. -->
+    <body name="target_b" pos="5.0 0 0.15">
+      <freejoint/>
+      <geom name="target_b_geom" type="sphere" size="0.15" mass="0.5" rgba="0.1 0.7 0.2 1"
+            condim="6"/>
+    </body>
+  </worldbody>
+
+  <keyframe>
+    <!-- Cue ball launched at 12 m/s toward ball A (3m away) -- see ball
+         B's own comment above for why 12, not collision.xml's original
+         3.5. Ball A and ball B both start at rest. All three bodies
+         free -- Sigma perturbs each independently at rollout time, same
+         convention as collision.xml/occlusion_corridor_moving. -->
+    <key name="break" qpos="0 0 0.15 1 0 0 0   3 0 0.15 1 0 0 0   5.0 0 0.15 1 0 0 0"
+                      qvel="12 0 0 0 0 0       0 0 0 0 0 0        0 0 0 0 0 0"/>
+  </keyframe>
+</mujoco>

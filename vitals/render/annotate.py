@@ -36,22 +36,36 @@ def draw_marker(frame, px, py, color, radius=6, thickness=2):
 def annotate_episode_frames(frames, true_pos, recon_pos, cam_pos, cam_mat, fovy_deg,
                              prefix_frames, border_thickness=8):
     """frames: (T,H,W,3) uint8 -- prefix+continuation already concatenated.
-    true_pos/recon_pos: (T,3) world positions (recon_pos may contain NaN
-    rows -- unreconstructed/occluded frames, skipped). Returns a NEW
-    (T,H,W,3) array: green circle=true physics position, red circle=Phi-
-    reconstructed position, border green=real prefix / red=model-generated
-    continuation. Pure post-hoc drawing -- never mutates `frames`."""
+    true_pos/recon_pos: (T,3) world positions for the single-object case
+    (unchanged from before this docstring note), OR (T,K,3) for K>1
+    (2026-09, billiards/multi-collision scoping -- previously hardcoded
+    to object 0 only, both here and at every existing call site, so a
+    K=2 scenario's own second object was never visualized despite R2
+    already scoring it). recon_pos may contain NaN rows -- unreconstructed/
+    occluded frames, skipped, per-object. Returns a NEW (T,H,W,3) array:
+    green circle=true physics position, red circle=Phi-reconstructed
+    position, ONE PAIR PER OBJECT when K>1, border green=real prefix /
+    red=model-generated continuation. Pure post-hoc drawing -- never
+    mutates `frames`."""
     from ..phi.reconstruct import project_to_pixel
 
     T, H, W = frames.shape[:3]
+    true_pos = np.asarray(true_pos)
+    recon_pos = np.asarray(recon_pos)
+    if true_pos.ndim == 2:      # (T,3) -- single-object, backward compatible
+        true_pos = true_pos[:, None, :]
+        recon_pos = recon_pos[:, None, :]
+    K = true_pos.shape[1]
+
     annotated = np.empty_like(frames)
     for i in range(T):
         frame = frames[i]
-        true_px = project_to_pixel(true_pos[i], cam_pos, cam_mat, fovy_deg, W, H)
-        recon_px = (project_to_pixel(recon_pos[i], cam_pos, cam_mat, fovy_deg, W, H)
-                    if not np.isnan(recon_pos[i]).any() else None)
-        frame = draw_marker(frame, *(true_px or (None, None)), color=(0, 220, 0))
-        frame = draw_marker(frame, *(recon_px or (None, None)), color=(230, 40, 40))
+        for k in range(K):
+            true_px = project_to_pixel(true_pos[i, k], cam_pos, cam_mat, fovy_deg, W, H)
+            recon_px = (project_to_pixel(recon_pos[i, k], cam_pos, cam_mat, fovy_deg, W, H)
+                        if not np.isnan(recon_pos[i, k]).any() else None)
+            frame = draw_marker(frame, *(true_px or (None, None)), color=(0, 220, 0))
+            frame = draw_marker(frame, *(recon_px or (None, None)), color=(230, 40, 40))
         if border_thickness > 0:
             border_color = (0, 220, 0) if i < prefix_frames else (230, 40, 40)
             frame = draw_border(frame, border_color, thickness=border_thickness)

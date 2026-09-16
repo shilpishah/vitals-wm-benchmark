@@ -1,0 +1,59 @@
+<mujoco model="soft_ramp">
+  <!-- Z-up. AGENT.md M9.1 (2026-09-14): the soft-body scenario WITH a
+       scorable post-contact trajectory. ramp_descent's own incline, legs
+       and floor (copied verbatim -- same plane equations, so the pixel path
+       reuses RAMP_PLANE_PIECES with the soft body's own centroid offset),
+       with the rigid ball replaced by a deformable ellipsoid (8x8x8 flex,
+       0.5 kg, 0.175 m rest radius) released 0.25 m above the ramp surface
+       at x=-3.3. Material: VOLUMETRIC elasticity (young 1000, poisson 0.3,
+       damping 0.01), not soft_drop's edge-equality material -- measured on
+       this slope (see AGENT.md M9.1): edge equality let the mesh volume
+       drift +28% mid-slope and the body died at the toe; young 1000
+       squashes 18% at first contact, stays ~5% deformed while rolling,
+       keeps volume within 0.92-1.02 and rolls the whole ramp and ~3 m of
+       floor over 6 s; young 3000 is nearly rigid (8%), young 300 collapses.
+       Solver settings are MuJoCo's own flex reference (CG, 1e-6, 1 ms,
+       implicitfast). Bit-reproducible across processes (AGENT.md M9.1). -->
+  <option solver="CG" tolerance="1e-6" timestep="0.001" integrator="implicitfast" gravity="0 0 -9.81"/>
+  <size memory="20M"/>
+  <visual><global offwidth="1280" offheight="720"/></visual>
+  <default><geom friction="0.6 0.005 0.03" solref="0.01 1"/></default>
+  <worldbody>
+    <light diffuse="0.8 0.8 0.8" pos="0 0 4" dir="0 0 -1"/>
+<geom name="floor" type="plane" size="6 3 0.1" pos="1.6 0 0" rgba="0.5 0.5 0.5 1"/>
+
+    <!-- Box centre/size solved from the desired WORLD-SPACE top-surface
+         endpoints (top: x=-4.286 z=1.8, toe: x=-0.9 z=0 -- flush with the
+         floor, no step) via the euler-Y rotation, not guessed pre-rotation:
+         guessing pre-rotation coordinates put the ball's start almost
+         exactly on the rotated ramp's true top edge (4cm of margin), which
+         made the whole reference ensemble trimodal -- roll forward, roll
+         backward off the ramp, or land balanced on the edge and barely
+         move at all -- depending on lambda-scale perturbation alone. -->
+    <geom name="ramp" type="box" size="1.917 0.6 0.05" pos="-2.6165 0 0.8559"
+          euler="0 28 0" rgba="0.6 0.4 0.3 1"/>
+
+    <!-- Support legs -- purely cosmetic (contype/conaffinity 0, same as the
+         wall), so they change nothing about the physics: the ramp was
+         already a fixed, immovable geom regardless of what visibly holds it
+         up. But an unsupported box floating at an angle reads as an obvious
+         rendering artifact, which undermines the whole point of a
+         physical-plausibility benchmark. Heights solved from the ramp's own
+         top-surface formula (z_top(x) = 1.8 - 0.5317*(x+4.286)) minus the
+         box's vertical thickness, so the legs actually meet the underside
+         rather than floating or clipping through it. -->
+    <geom name="ramp_leg_1a" type="box" size="0.06 0.06 0.7533" pos="-3.9 0.5 0.7533"
+          contype="0" conaffinity="0" rgba="0.45 0.3 0.2 1"/>
+    <geom name="ramp_leg_1b" type="box" size="0.06 0.06 0.7533" pos="-3.9 -0.5 0.7533"
+          contype="0" conaffinity="0" rgba="0.45 0.3 0.2 1"/>
+    <geom name="ramp_leg_2a" type="box" size="0.06 0.06 0.3014" pos="-2.2 0.5 0.3014"
+          contype="0" conaffinity="0" rgba="0.45 0.3 0.2 1"/>
+    <geom name="ramp_leg_2b" type="box" size="0.06 0.06 0.3014" pos="-2.2 -0.5 0.3014"
+          contype="0" conaffinity="0" rgba="0.45 0.3 0.2 1"/>
+    <flexcomp name="blob" type="ellipsoid" count="8 8 8" spacing="0.05 0.05 0.05" pos="-3.3 0 1.55" dim="3"
+              radius="0.001" rgba="0.8 0.1 0.1 1" mass="0.5">
+      <elasticity young="1000" poisson="0.3" damping="0.01"/>
+      <contact selfcollide="none" internal="false"/>
+    </flexcomp>
+  </worldbody>
+</mujoco>

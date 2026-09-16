@@ -26,6 +26,17 @@ class Trajectory:
     present: np.ndarray
     names: list
     meta: dict = field(default_factory=dict)
+    # Soft-body modality (AGENT.md M9, 2026-09-13): a deformable body has a
+    # configuration, not a pose. `pos` stays its centroid (the centre of
+    # mass obeys the same ballistics, so R1/R3/R4 read it unchanged) and
+    # `shape` carries per-object SHAPE descriptors, (T, K, S), None for
+    # every rigid scenario -- no rigid code path reads it. The descriptor
+    # set is fixed by vitals.physics.softbody.SHAPE_DESCRIPTORS so the
+    # state-space (vertex) and pixel (mask) paths compute the same S
+    # quantities. The raw vertex cloud, when kept, lives in
+    # meta["flex_vertices"][name] as (T, nvert, 3) -- it is what the
+    # renderer needs to draw the body and what the mutants deform.
+    shape: np.ndarray | None = None
 
     @property
     def T(self): return len(self.t)
@@ -38,7 +49,9 @@ class Trajectory:
 
     def copy(self):
         return Trajectory(self.t.copy(), self.pos.copy(), self.quat.copy(),
-                          self.present.copy(), list(self.names), dict(self.meta))
+                          self.present.copy(), list(self.names),
+                          {k: (dict(v) if isinstance(v, dict) else v) for k, v in self.meta.items()},
+                          None if self.shape is None else self.shape.copy())
 
     def index(self, name): return self.names.index(name)
 
@@ -73,4 +86,15 @@ class EpisodeSpec:
     # for scenarios whose only physically-free variable is along-track speed
     # (e.g. occlusion_corridor); see that function's docstring for why
     # isotropic perturbation is actively wrong there, not just unnecessary.
-    perturb_mode: str = "full"
+    perturb_mode: str = "full"    # "full" | "velocity_x_only" | either + "_obj0" (perturb only the first free body; physics/runner.py)
+    # 2026-09, billiards/multi-collision scoping -- a SEPARATE, explicit,
+    # pre-registered opt-in for real-model (L1) scoring to reconstruct
+    # EVERY object in a K>1 scene (up to K=3), not just the primary.
+    # Deliberately NOT inferred from target_property or K (see `adapters.
+    # video_model.VideoWorldModel`'s own docstring for why reusing P3's
+    # own trigger, or gating on K alone, would both be the kind of silent
+    # scope-expansion this project's own R2 gating discipline already
+    # warns against). False for every existing manifest -- a strict
+    # no-op, including `collision.yaml`, which deliberately stays
+    # single-object per its own module docstring.
+    track_all_objects: bool = False

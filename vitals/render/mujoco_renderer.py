@@ -30,6 +30,32 @@ from . import Frames, GroundTruth
 DEFAULT_CAMERA = dict(lookat=[0.5, 0.0, 0.6], distance=8.5, azimuth=-90, elevation=-12)
 
 
+def camera_pose(scene_path, cam_kwargs, height=360, width=640):
+    """(cam_pos, cam_mat, fovy_deg) for a free camera on this scene -- the
+    SAME pose MujocoRenderer.render captures into GroundTruth, obtained
+    the same way (renderer.scene.camera[0] after update_scene, ipd zeroed)
+    so that state-space shape descriptors (softbody.attach_shape) are
+    projected through exactly the camera the pixels come from. Costs one
+    scene update, no frame is rendered."""
+    model = mujoco.MjModel.from_xml_path(scene_path)
+    model.vis.global_.ipd = 0.0
+    data = mujoco.MjData(model)
+    renderer = mujoco.Renderer(model, height=height, width=width)
+    cam = mujoco.MjvCamera()
+    cam.lookat = cam_kwargs["lookat"]; cam.distance = cam_kwargs["distance"]
+    cam.azimuth = cam_kwargs["azimuth"]; cam.elevation = cam_kwargs["elevation"]
+    mujoco.mj_forward(model, data)
+    renderer.update_scene(data, camera=cam)
+    c = renderer.scene.camera[0]
+    cam_pos = np.array(c.pos, dtype=np.float64)
+    forward = np.array(c.forward, dtype=np.float64)
+    up = np.array(c.up, dtype=np.float64)
+    cam_mat = np.stack([np.cross(forward, up), up, -forward], axis=1)
+    fovy = float(model.vis.global_.fovy)
+    renderer.close()
+    return cam_pos, cam_mat, fovy
+
+
 class MujocoRenderer:
     name = "mujoco"
     deterministic = True
@@ -77,8 +103,32 @@ class MujocoRenderer:
         body_to_idx = {}
         for i, nm in enumerate(traj.names):
             bid = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, nm)
-            body_to_idx[bid] = i
+            if bid >= 0:
+                body_to_idx[bid] = i
         geom_to_idx = np.array([body_to_idx.get(bid, -1) for bid in model.geom_bodyid])
+        # Soft bodies (AGENT.md M9, 2026-09-13): a flex is placed from its
+        # kept vertex cloud (meta["flex_vertices"]), and its segmentation
+        # pixels carry object type mjOBJ_FLEX with the FLEX id -- a separate
+        # id space from geoms (found directly: a flex read as "geom 0").
+        from ..physics import softbody as sb
+        flex_info = {name: (vadr, vnum) for name, vadr, vnum, _ in sb.flex_objects(model)}
+        flex_verts = traj.meta.get("flex_vertices", {})
+        flexid_to_idx = {}
+        for i, nm in enumerate(traj.names):
+            fid = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_FLEX, nm)
+            if fid >= 0:
+                flexid_to_idx[fid] = i
+        rigid_slots = [(k, body_to_idx and mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, nm))
+                       for k, nm in enumerate(traj.names) if nm not in flex_info]
+        # qpos address of each rigid object's free joint (no longer assumed
+        # to be k*7: flex vertex joints may precede or interleave them).
+        rigid_qadr = {}
+        for k, bid in rigid_slots:
+            if bid is None or bid < 0:
+                continue
+            j = int(model.body_jntadr[bid])
+            if j >= 0 and model.jnt_type[j] == mujoco.mjtJoint.mjJNT_FREE:
+                rigid_qadr[k] = int(model.jnt_qposadr[j])
 
         T, K = traj.T, traj.K
         rgb = np.zeros((T, self.height, self.width, 3), np.uint8)
@@ -88,8 +138,15 @@ class MujocoRenderer:
 
         for i in range(T):
             for k in range(K):
-                data.qpos[k * 7: k * 7 + 3] = traj.pos[i, k]
-                data.qpos[k * 7 + 3: k * 7 + 7] = traj.quat[i, k]
+                nm = traj.names[k]
+                if nm in flex_info:
+                    if nm in flex_verts:
+                        vadr, vnum = flex_info[nm]
+                        sb.set_flex_vertices(model, data, vadr, vnum, flex_verts[nm][i])
+                    continue
+                qa = rigid_qadr.get(k, k * 7)
+                data.qpos[qa: qa + 3] = traj.pos[i, k]
+                data.qpos[qa + 3: qa + 7] = traj.quat[i, k]
             mujoco.mj_forward(model, data)
 
             renderer.update_scene(data, camera=cam)
@@ -105,9 +162,14 @@ class MujocoRenderer:
 
             renderer.enable_segmentation_rendering()
             renderer.update_scene(data, camera=cam)
-            geom_ids = renderer.render()[..., 0]
-            valid = geom_ids >= 0
-            seg[i][valid] = geom_to_idx[geom_ids[valid]]
+            segraw = renderer.render()
+            obj_ids, obj_types = segraw[..., 0], segraw[..., 1]
+            is_geom = (obj_ids >= 0) & (obj_types == int(mujoco.mjtObj.mjOBJ_GEOM))
+            seg[i][is_geom] = geom_to_idx[obj_ids[is_geom]]
+            if flexid_to_idx:
+                is_flex = (obj_ids >= 0) & (obj_types == int(mujoco.mjtObj.mjOBJ_FLEX))
+                for fid, idx in flexid_to_idx.items():
+                    seg[i][is_flex & (obj_ids == fid)] = idx
             renderer.disable_segmentation_rendering()
 
             renderer.enable_depth_rendering()

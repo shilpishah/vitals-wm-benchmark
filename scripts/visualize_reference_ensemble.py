@@ -45,7 +45,7 @@ CAMERAS = {
 # Demonstrative mutant per scenario, for breadcrumbs.png / ensemble.mp4's red
 # trace -- wrong_gravity only means something where there's vertical motion
 # to corrupt (ramp_descent); occlusion_corridor gets `duplicate` instead,
-# still R2 but "erroneous extra object" rather than "vanished".
+# still R1 but "erroneous extra object" rather than "vanished".
 DEMO_MUTANT = {
     "ramp_descent":       lambda base, horizon_s: mut.wrong_gravity(base, factor=0.6),
     "occlusion_corridor": lambda base, horizon_s: mut.duplicate(base, t_star=horizon_s * 0.25),

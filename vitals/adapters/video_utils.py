@@ -112,8 +112,17 @@ def save_trajectory(traj, path):
     pickled, so the cache is readable without trusting arbitrary code
     execution on load."""
     import json
-    np.savez_compressed(str(path), t=traj.t, pos=traj.pos, quat=traj.quat, present=traj.present,
-                        names=json.dumps(traj.names), meta=json.dumps(traj.meta))
+    # Soft-body state (M9): a stitched trajectory's prefix comes from the
+    # true rollout and carries the vertex cloud / extras (numpy arrays,
+    # not JSON); they are state-space data that the cache (pixel-measured
+    # candidates) has no use for, so they are dropped here rather than
+    # pickled. `shape` (Phi's descriptors) IS kept, as its own array.
+    meta = {k: v for k, v in traj.meta.items() if k not in ("flex_vertices", "flex_extras")}
+    arrays = dict(t=traj.t, pos=traj.pos, quat=traj.quat, present=traj.present,
+                  names=json.dumps(traj.names), meta=json.dumps(meta))
+    if traj.shape is not None:
+        arrays["shape"] = traj.shape
+    np.savez_compressed(str(path), **arrays)
 
 
 def load_trajectory(path):
@@ -123,7 +132,8 @@ def load_trajectory(path):
     from ..types import Trajectory
     d = np.load(str(path), allow_pickle=False)
     return Trajectory(t=d["t"], pos=d["pos"], quat=d["quat"], present=d["present"],
-                      names=json.loads(str(d["names"])), meta=json.loads(str(d["meta"])))
+                      names=json.loads(str(d["names"])), meta=json.loads(str(d["meta"])),
+                      shape=d["shape"] if "shape" in d.files else None)
 
 
 def _write_video(frames, path, fps):

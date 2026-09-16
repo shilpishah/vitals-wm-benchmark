@@ -8,10 +8,12 @@ trajectory with placeholder future frames, it generates forward from what
 it saw. `concat_trajectory` stitches a continuation back onto its prefix
 into one full-length Trajectory, which is what detect/ actually scores.
 
-N>1 exists for a design this repo hasn't built yet: distributional
-calibration scoring (P6, fair_crps/fair_energy_score in stats/scoring.py,
-M7) needs an ensemble of candidate samples compared against the reference
-distribution. The event/survival design (what GATE 3 and run_eval.py check)
+N>1 exists for the distributional calibration design (P6, M7):
+`stats/scoring.py` (built 2026-09-11: fair_crps / fair_energy_score /
+fair_energy_distance / rank_histogram / spread_skill, `score_episode`)
+scores an ensemble of candidate samples against the held-out truth and
+the reference distribution. No population script asks for n_samples > 1
+yet -- that is a per-model GPU-cost decision, not a code gap. The event/survival design (what GATE 3 and run_eval.py check)
 scores exactly ONE candidate per episode, per AGENT.md's core loop --
 pooling multiple correlated samples from the same episode into that
 pipeline would violate 3.10 (bootstrap over episodes, never over rollouts).

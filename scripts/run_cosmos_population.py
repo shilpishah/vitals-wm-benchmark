@@ -116,7 +116,7 @@ def main():
                         horizon_s=manifest["horizon_s"], fps=manifest["fps"], seed=manifest.get("seed", 0),
                         perturb_mode=manifest.get("perturb_mode", "full"))
     M, LAM, ALPHA = spec.n_reference, spec.lam, 0.01
-    STATS = {"R2": sigma_existence, "R5": sigma_kinematic}
+    STATS = {"R1": sigma_existence, "R3": sigma_kinematic}
 
     print(f"building the SAME M={M} reference ensemble + calibrated thresholds already used for "
           f"every other {args.scenario} population (cheap, local, state-space only)...")
@@ -196,8 +196,8 @@ def main():
     result = dict(
         scenario=args.scenario, target_property=spec.target_property, backend="cosmos",
         M=M, lam=LAM, t_max=t_max_episode,
-        thresholds_median=dict(R2=float(np.median(thetas_episode["R2"][np.isfinite(thetas_episode["R2"])])),
-                                R5=float(np.median(thetas_episode["R5"][np.isfinite(thetas_episode["R5"])]))),
+        thresholds_median=dict(R1=float(np.median(thetas_episode["R1"][np.isfinite(thetas_episode["R1"])])),
+                                R3=float(np.median(thetas_episode["R3"][np.isfinite(thetas_episode["R3"])]))),
         # No GATE 1a/1b for a real-model population -- those concepts (null
         # false-positive rate, planted-defect demonstration mutants) are
         # specific to the synthetic-mutant validation populations; a real

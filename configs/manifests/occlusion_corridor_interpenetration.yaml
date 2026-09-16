@@ -10,11 +10,11 @@
 #
 # What's different here is entirely in scripts/run_l0_demo.py's own
 # handling, not this file: target_property: P3 is what makes that script add
-# sigma_interpenetration (R4) to STATS and swap the `teleport` mutant into
+# sigma_interpenetration (R2) to STATS and swap the `teleport` mutant into
 # GATE 1b's demo cases and the 80-episode survival population.
 #
 # n_reference: 100, not the usual 30 -- found directly (2026-08) that
-# GATE 1a's false-termination rate is a union across R2/R4/R5 together, and
+# GATE 1a's false-termination rate is a union across R1/R2/R3 together, and
 # at M=30 estimate_threshold's own whole-path calibration was already
 # selecting the single MAXIMUM LOO deviation out of only 30 references
 # (confirmed by sweeping alpha from 0.01 to 0.001 with zero change in the

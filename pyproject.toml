@@ -19,6 +19,10 @@ cosmos = ["imageio[ffmpeg]>=2.30"]
 # browser at all"). Needs a real GUI backend (macosx/Qt/Tk) to open an
 # interactive window; degrades to non-interactive if run headless.
 plot = ["matplotlib>=3.7"]
+# Only needed by vitals/adapters/runway.py -- API-access models via the
+# Runway developer SDK (2026-09). Imported lazily inside the adapter, so
+# nothing else in this project needs it installed.
+runway = ["runwayml>=5.20", "imageio[ffmpeg]>=2.30"]
 
 [build-system]
 requires = ["setuptools>=61.0"]
